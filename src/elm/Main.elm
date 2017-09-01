@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onCheck)
+import Select
 
 
 -- APP
@@ -66,6 +67,13 @@ type alias TypeConnection =
     }
 
 
+type FormMessage
+    = TextInput String String
+    | Checkbox String Bool
+    | SelectPosition TileGroupsPosition
+    | SelectTileType TileType
+
+
 
 -- MODEL
 
@@ -75,16 +83,18 @@ type alias Model =
     , tiles : List Tile
     , currentTile : Maybe Tile
     , groups : List TileGroup
+    , currentGroup : Maybe TileGroup
     , connections : List TypeConnection
     }
 
 
 model : Model
 model =
-    { page = Home
+    { page = AddTile
     , tiles = [ emptyTile, emptyTile, emptyTile ]
     , currentTile = Just emptyTile
     , groups = []
+    , currentGroup = Just emptyGroup
     , connections = []
     }
 
@@ -99,51 +109,74 @@ type Msg
     | SaveNewTile Tile
     | OpenExistingTile Tile
     | SaveExistingTile Tile
-    | UpdateTileField String String
+    | UpdateTileField FormMessage
+    | UpdateGroupField FormMessage
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        UpdateTileField field value ->
+        UpdateTileField message ->
             let
                 newTile =
                     case model.currentTile of
                         Just tile ->
-                            Just (updateTile tile field value)
+                            Just (updateTile tile message)
 
                         _ ->
                             model.currentTile
             in
                 { model | currentTile = newTile }
 
+        UpdateGroupField message ->
+            let
+                newGroup =
+                    case model.currentGroup of
+                        Just g ->
+                            Just (updateGroup g message)
+
+                        _ ->
+                            model.currentGroup
+            in
+                { model | currentGroup = newGroup }
+
         _ ->
             model
 
 
-updateTile : Tile -> String -> String -> Tile
-updateTile tile inputName inputValue =
-    case inputName of
-        "name" ->
+updateTile : Tile -> FormMessage -> Tile
+updateTile tile message =
+    case message of
+        TextInput "name" inputValue ->
             { tile | name = inputValue }
 
-        "image_url" ->
+        TextInput "image_url" inputValue ->
             { tile | image_url = inputValue }
 
-        "action" ->
+        TextInput "action" inputValue ->
             { tile | action = inputValue }
 
-        "active" ->
-            { tile
-                | active =
-                    if inputValue == "True" then
-                        True
-                    else
-                        False
-            }
+        Checkbox "active" inputValue ->
+            { tile | active = inputValue }
 
         _ ->
             tile
+
+
+updateGroup : TileGroup -> FormMessage -> TileGroup
+updateGroup g message =
+    case message of
+        TextInput "name" inputValue ->
+            { g | name = inputValue }
+
+        TextInput "slug" inputValue ->
+            { g | slug = inputValue }
+
+        SelectPosition position ->
+            { g | position = position }
+
+        _ ->
+            g
 
 
 
@@ -159,6 +192,22 @@ view model =
                     [ listTiles model.tiles
                     , listGroups model.groups
                     ]
+
+            AddGroup ->
+                case model.currentGroup of
+                    Just g ->
+                        groupForm g
+
+                    _ ->
+                        text "None"
+
+            AddTile ->
+                case model.currentTile of
+                    Just g ->
+                        tileForm g
+
+                    _ ->
+                        text "None"
 
             _ ->
                 text "No selected page"
@@ -180,27 +229,68 @@ emptyTile =
 
 tileForm : Tile -> Html Msg
 tileForm tile =
-    div []
-        [ div [ class "form-group" ]
-            [ label [] [ text "Name" ]
-            , input [ class "form-control", type_ "text", value tile.name, onInput (UpdateTileField "name") ] []
-            ]
-        , div [ class "form-group" ]
-            [ label [] [ text "Image URL" ]
-            , input [ class "form-control", type_ "url", value tile.image_url, onInput (UpdateTileField "image_url") ] []
-            ]
-        , div [ class "form-group" ]
-            [ label [] [ text "Action" ]
-            , input [ class "form-control", type_ "text", value tile.action, onInput (UpdateTileField "action") ] []
-            ]
-        , div [ class "form-check" ]
-            [ label [ class "form-check-label" ]
-                [ input [ class "form-check-input", type_ "checkbox", checked tile.active, onCheck (\val -> UpdateTileField "active" (toString val)) ]
-                    []
-                , text "Active"
+    let
+        selectOptions =
+            [ Link, News ]
+    in
+        div []
+            [ div [ class "form-group" ]
+                [ label [] [ text "Name" ]
+                , input [ class "form-control", type_ "text", value tile.name, onInput (\val -> UpdateTileField (TextInput "name" val)) ] []
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Image URL" ]
+                , input [ class "form-control", type_ "url", value tile.image_url, onInput (\val -> UpdateTileField (TextInput "image_url" val)) ] []
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Action" ]
+                , input [ class "form-control", type_ "text", value tile.action, onInput (\val -> UpdateTileField (TextInput "action" val)) ] []
+                ]
+            , div [ class "form-check" ]
+                [ label [ class "form-check-label" ]
+                    [ input [ class "form-check-input", type_ "checkbox", checked tile.active, onCheck (\val -> UpdateTileField (Checkbox "active" val)) ]
+                        []
+                    , text "Active"
+                    ]
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Type" ]
+                , Select.fromSelected selectOptions (\val -> UpdateTileField (SelectTileType val)) tile.type_
                 ]
             ]
-        ]
+
+
+emptyGroup : TileGroup
+emptyGroup =
+    { id = 0
+    , created = ""
+    , modified = ""
+    , name = ""
+    , slug = ""
+    , position = Main
+    }
+
+
+groupForm : TileGroup -> Html Msg
+groupForm g =
+    let
+        selectOptions =
+            [ Main, Context ]
+    in
+        div []
+            [ div [ class "form-group" ]
+                [ label [] [ text "Name" ]
+                , input [ class "form-control", type_ "text", value g.name, onInput (\val -> UpdateGroupField (TextInput "name" val)) ] []
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Slug" ]
+                , input [ class "form-control", type_ "text", value g.slug, onInput (\val -> UpdateGroupField (TextInput "slug" val)) ] []
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Position" ]
+                , Select.fromSelected selectOptions (\val -> UpdateGroupField (SelectPosition val)) g.position
+                ]
+            ]
 
 
 listTiles : List Tile -> Html Msg
