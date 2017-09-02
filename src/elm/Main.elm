@@ -8,23 +8,53 @@ import Select
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipe
 import Json.Encode as Encode
+import Navigation
+import UrlParser as Url exposing ((</>), (<?>), s, int, stringParam, top)
 
 
 -- APP
+-- main : Program Never Model Msg
+-- main =
+--     Html.beginnerProgram { model = model, view = view, update = update }
 
 
 main : Program Never Model Msg
 main =
-    Html.beginnerProgram { model = model, view = view, update = update }
+    Navigation.program UrlChange
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = (\_ -> Sub.none)
+        }
+
+
+init : Navigation.Location -> ( Model, Cmd Msg )
+init location =
+    ( model
+    , Cmd.none
+    )
 
 
 type Page
     = Login
     | Home
     | AddTile
-    | EditTile
+    | EditTile Int
     | AddGroup
-    | EditGroup
+    | EditGroup Int
+    | Delete String Int
+
+
+routeParse : Url.Parser (Page -> a) a
+routeParse =
+    Url.oneOf
+        [ Url.map Home top
+        , Url.map AddTile (Url.s "tile-add")
+        , Url.map EditTile (Url.s "tile-edit" </> Url.int)
+        , Url.map AddGroup (Url.s "group-add")
+        , Url.map EditGroup (Url.s "group-edit" </> Url.int)
+        , Url.map Delete (Url.s "delete" </> Url.string </> Url.int)
+        ]
 
 
 type TileType
@@ -100,7 +130,7 @@ type alias Model =
 
 model : Model
 model =
-    { page = AddTile
+    { page = Home
     , tiles = [ emptyTile, emptyTile, emptyTile ]
     , currentTile = Just emptyTile
     , groups = []
@@ -115,10 +145,11 @@ model =
 
 type Msg
     = NoOp
-    | OpenNewTile
-    | SaveNewTile Tile
-    | OpenExistingTile Tile
-    | SaveExistingTile Tile
+    | UrlChange Navigation.Location
+    | NewUrl String
+    | SaveTile Tile
+    | SaveGroup TileGroup
+    | DeleteItem String Int
     | UpdateTileField FormMessage
     | UpdateGroupField FormMessage
     | LoadTiles (Result Http.Error (List Tile))
@@ -130,9 +161,34 @@ type Msg
     | ReqDelete String (Result Http.Error MessageResponse)
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        UrlChange location ->
+            let
+                newPage =
+                    case Url.parseHash routeParse location of
+                        Just page ->
+                            page
+
+                        _ ->
+                            Home
+
+                newModel =
+                    case newPage of
+                        EditTile id ->
+                            model
+
+                        EditGroup id ->
+                            model
+
+                        _ ->
+                            model
+            in
+                ( { newModel | page = newPage }
+                , Cmd.none
+                )
+
         UpdateTileField message ->
             let
                 newTile =
@@ -143,7 +199,7 @@ update msg model =
                         _ ->
                             model.currentTile
             in
-                { model | currentTile = newTile }
+                ( { model | currentTile = newTile }, Cmd.none )
 
         UpdateGroupField message ->
             let
@@ -155,19 +211,44 @@ update msg model =
                         _ ->
                             model.currentGroup
             in
-                { model | currentGroup = newGroup }
+                ( { model | currentGroup = newGroup }
+                , Cmd.none
+                )
 
         LoadTiles (Ok tiles) ->
-            { model | tiles = tiles }
+            ( { model | tiles = tiles }
+            , Cmd.none
+            )
 
         LoadGroups (Ok groups) ->
-            { model | groups = groups }
+            ( { model | groups = groups }
+            , Cmd.none
+            )
 
         LoadConnections (Ok conns) ->
-            { model | connections = conns }
+            ( { model | connections = conns }
+            , Cmd.none
+            )
+
+        SaveTile tile ->
+            ( model, saveTile tile )
+
+        SaveGroup g ->
+            ( model, saveGroup g )
+
+        DeleteItem item id ->
+            ( model, deleteItem item id )
+
+        ReqDelete itemType (Ok msg) ->
+            ( model, Navigation.newUrl "#" )
+
+        ReqDelete itemType (Err error) ->
+            ( model, Cmd.none )
 
         _ ->
-            model
+            ( model
+            , Cmd.none
+            )
 
 
 updateTile : Tile -> FormMessage -> Tile
@@ -212,12 +293,33 @@ updateGroup g message =
 view : Model -> Html Msg
 view model =
     div [ class "container" ]
-        [ case model.page of
+        [ div []
+            [ a [ href "#" ] [ text "Home" ]
+            , a [ href "#tile-add" ] [ text "Add tile" ]
+            , a [ href "#group-add" ] [ text "Add group" ]
+            ]
+        , case model.page of
             Home ->
                 div []
                     [ listTiles model.tiles
                     , listGroups model.groups
                     ]
+
+            AddTile ->
+                case model.currentTile of
+                    Just g ->
+                        tileForm g
+
+                    _ ->
+                        text "None"
+
+            EditTile id ->
+                case model.currentTile of
+                    Just g ->
+                        tileForm g
+
+                    _ ->
+                        text "None"
 
             AddGroup ->
                 case model.currentGroup of
@@ -227,13 +329,16 @@ view model =
                     _ ->
                         text "None"
 
-            AddTile ->
-                case model.currentTile of
+            EditGroup id ->
+                case model.currentGroup of
                     Just g ->
-                        tileForm g
+                        groupForm g
 
                     _ ->
                         text "None"
+
+            Delete itemType id ->
+                deleteModal itemType id
 
             _ ->
                 text "No selected page"
@@ -251,6 +356,15 @@ emptyTile =
     , action = ""
     , active = False
     }
+
+
+deleteModal : String -> Int -> Html Msg
+deleteModal itemType id =
+    div []
+        [ h1 [] [ text "Are you sure?" ]
+        , a [ href "#", class "btn btn-secondary" ] [ text "No, go back" ]
+        , button [ class "btn btn-danger", onClick (DeleteItem itemType id) ] [ text "Yes, Delete this item please" ]
+        ]
 
 
 tileForm : Tile -> Html Msg
@@ -282,6 +396,9 @@ tileForm tile =
             , div [ class "form-group" ]
                 [ label [] [ text "Type" ]
                 , Select.fromSelected selectOptions (\val -> UpdateTileField (SelectTileType val)) tile.type_
+                ]
+            , div []
+                [ button [ onClick (SaveTile tile), class "btn btn-primary" ] [ text "Save" ]
                 ]
             ]
 
@@ -316,6 +433,9 @@ groupForm g =
                 [ label [] [ text "Position" ]
                 , Select.fromSelected selectOptions (\val -> UpdateGroupField (SelectPosition val)) g.position
                 ]
+            , div []
+                [ button [ onClick (SaveGroup g), class "btn btn-primary" ] [ text "Save" ]
+                ]
             ]
 
 
@@ -326,11 +446,15 @@ listTiles tiles =
 
 listTileItem : Tile -> Html Msg
 listTileItem tile =
-    li []
-        [ h1 [] [ text tile.name ]
-        , button [] [ text "Edit" ]
-        , button [] [ text "Delete" ]
-        ]
+    let
+        id =
+            toString tile.id
+    in
+        li []
+            [ h1 [] [ text tile.name ]
+            , a [ href <| "#tile-edit/" ++ id ] [ text "Edit" ]
+            , a [ href <| "#delete/tile/" ++ id ] [ text "Delete" ]
+            ]
 
 
 listGroups : List TileGroup -> Html Msg
@@ -568,7 +692,7 @@ deleteItem : String -> Int -> Cmd Msg
 deleteItem itemType id =
     let
         url =
-            "http://localhost/" ++ itemType ++ (toString id)
+            "http://localhost/" ++ itemType ++ "/" ++ (toString id)
 
         req =
             Http.request
