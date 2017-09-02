@@ -31,18 +31,23 @@ main =
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     ( model
-    , Cmd.none
+    , Cmd.batch [ loadTiles, loadGroups, loadConnections ]
     )
+
+
+apiBase : String
+apiBase =
+    "http://localhost:5000/tilesmanager-70e8d/us-central1/api/"
 
 
 type Page
     = Login
     | Home
     | AddTile
-    | EditTile Int
+    | EditTile String
     | AddGroup
-    | EditGroup Int
-    | Delete String Int
+    | EditGroup String
+    | Delete String String
 
 
 routeParse : Url.Parser (Page -> a) a
@@ -50,10 +55,10 @@ routeParse =
     Url.oneOf
         [ Url.map Home top
         , Url.map AddTile (Url.s "tile-add")
-        , Url.map EditTile (Url.s "tile-edit" </> Url.int)
+        , Url.map EditTile (Url.s "tile-edit" </> Url.string)
         , Url.map AddGroup (Url.s "group-add")
-        , Url.map EditGroup (Url.s "group-edit" </> Url.int)
-        , Url.map Delete (Url.s "delete" </> Url.string </> Url.int)
+        , Url.map EditGroup (Url.s "group-edit" </> Url.string)
+        , Url.map Delete (Url.s "delete" </> Url.string </> Url.string)
         ]
 
 
@@ -68,7 +73,7 @@ type TileGroupsPosition
 
 
 type alias Tile =
-    { id : Int
+    { id : String
     , created : String
     , modified : String
     , name : String
@@ -80,7 +85,7 @@ type alias Tile =
 
 
 type alias TileGroup =
-    { id : Int
+    { id : String
     , created : String
     , modified : String
     , name : String
@@ -90,13 +95,13 @@ type alias TileGroup =
 
 
 type alias TileConnection =
-    { id : Int
+    { id : String
     , created : String
     , modified : String
     , target : Int
     , sort_order : Int
-    , nav_group_id : Int
-    , nav_tile_id : Int
+    , nav_group_id : String
+    , nav_tile_id : String
     , store_id : Int
     }
 
@@ -131,10 +136,10 @@ type alias Model =
 model : Model
 model =
     { page = Home
-    , tiles = [ emptyTile, emptyTile, emptyTile ]
-    , currentTile = Just emptyTile
+    , tiles = []
+    , currentTile = Nothing
     , groups = []
-    , currentGroup = Just emptyGroup
+    , currentGroup = Nothing
     , connections = []
     }
 
@@ -149,7 +154,7 @@ type Msg
     | NewUrl String
     | SaveTile Tile
     | SaveGroup TileGroup
-    | DeleteItem String Int
+    | DeleteItem String String
     | UpdateTileField FormMessage
     | UpdateGroupField FormMessage
     | LoadTiles (Result Http.Error (List Tile))
@@ -176,17 +181,41 @@ update msg model =
 
                 newModel =
                     case newPage of
+                        AddTile ->
+                            { model | currentTile = Just emptyTile }
+
                         EditTile id ->
-                            model
+                            { model
+                                | currentTile =
+                                    model.tiles
+                                        |> List.filter (\t -> t.id == id)
+                                        |> List.head
+                            }
+
+                        AddGroup ->
+                            { model | currentGroup = Just emptyGroup }
 
                         EditGroup id ->
-                            model
+                            { model
+                                | currentGroup =
+                                    model.groups
+                                        |> List.filter (\t -> t.id == id)
+                                        |> List.head
+                            }
 
                         _ ->
                             model
+
+                msgs =
+                    case newPage of
+                        Home ->
+                            [ loadTiles, loadGroups, loadConnections ]
+
+                        _ ->
+                            [ Cmd.none ]
             in
                 ( { newModel | page = newPage }
-                , Cmd.none
+                , Cmd.batch msgs
                 )
 
         UpdateTileField message ->
@@ -239,6 +268,12 @@ update msg model =
         DeleteItem item id ->
             ( model, deleteItem item id )
 
+        ReqSaveTile (Ok tile) ->
+            ( model, Navigation.newUrl "#" )
+
+        ReqSaveGroup (Ok group) ->
+            ( model, Navigation.newUrl "#" )
+
         ReqDelete itemType (Ok msg) ->
             ( model, Navigation.newUrl "#" )
 
@@ -262,6 +297,9 @@ updateTile tile message =
 
         TextInput "action" inputValue ->
             { tile | action = inputValue }
+
+        SelectTileType type_ ->
+            { tile | type_ = type_ }
 
         Checkbox "active" inputValue ->
             { tile | active = inputValue }
@@ -347,7 +385,7 @@ view model =
 
 emptyTile : Tile
 emptyTile =
-    { id = 0
+    { id = ""
     , created = ""
     , modified = ""
     , name = ""
@@ -358,7 +396,7 @@ emptyTile =
     }
 
 
-deleteModal : String -> Int -> Html Msg
+deleteModal : String -> String -> Html Msg
 deleteModal itemType id =
     div []
         [ h1 [] [ text "Are you sure?" ]
@@ -405,7 +443,7 @@ tileForm tile =
 
 emptyGroup : TileGroup
 emptyGroup =
-    { id = 0
+    { id = ""
     , created = ""
     , modified = ""
     , name = ""
@@ -446,15 +484,11 @@ listTiles tiles =
 
 listTileItem : Tile -> Html Msg
 listTileItem tile =
-    let
-        id =
-            toString tile.id
-    in
-        li []
-            [ h1 [] [ text tile.name ]
-            , a [ href <| "#tile-edit/" ++ id ] [ text "Edit" ]
-            , a [ href <| "#delete/tile/" ++ id ] [ text "Delete" ]
-            ]
+    li []
+        [ h1 [] [ text tile.name ]
+        , a [ href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
+        , a [ href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
+        ]
 
 
 listGroups : List TileGroup -> Html Msg
@@ -479,7 +513,7 @@ tilesDecoder =
 tileDecoder : Decode.Decoder Tile
 tileDecoder =
     DecodePipe.decode Tile
-        |> DecodePipe.required "id" Decode.int
+        |> DecodePipe.required "id" Decode.string
         |> DecodePipe.required "created" Decode.string
         |> DecodePipe.required "modified" Decode.string
         |> DecodePipe.required "name" Decode.string
@@ -493,7 +527,7 @@ tileEncoder : Tile -> Encode.Value
 tileEncoder tile =
     let
         attributes =
-            [ ( "id", Encode.int tile.id )
+            [ ( "id", Encode.string tile.id )
             , ( "name", Encode.string tile.name )
             , ( "image_url", Encode.string tile.image_url )
             , ( "type_", Encode.string <| toString tile.type_ )
@@ -529,7 +563,7 @@ groupsDecoder =
 groupDecoder : Decode.Decoder TileGroup
 groupDecoder =
     DecodePipe.decode TileGroup
-        |> DecodePipe.required "id" Decode.int
+        |> DecodePipe.required "id" Decode.string
         |> DecodePipe.required "created" Decode.string
         |> DecodePipe.required "modified" Decode.string
         |> DecodePipe.required "name" Decode.string
@@ -558,7 +592,7 @@ groupEncoder : TileGroup -> Encode.Value
 groupEncoder g =
     let
         attributes =
-            [ ( "id", Encode.int g.id )
+            [ ( "id", Encode.string g.id )
             , ( "name", Encode.string g.name )
             , ( "slug", Encode.string g.slug )
             , ( "position", Encode.string <| toString g.position )
@@ -575,13 +609,13 @@ connectionsDecoder =
 connectionDecoder : Decode.Decoder TileConnection
 connectionDecoder =
     DecodePipe.decode TileConnection
-        |> DecodePipe.required "id" Decode.int
+        |> DecodePipe.required "id" Decode.string
         |> DecodePipe.required "created" Decode.string
         |> DecodePipe.required "modified" Decode.string
         |> DecodePipe.required "target" Decode.int
         |> DecodePipe.required "sort_order" Decode.int
-        |> DecodePipe.required "nav_group_id" Decode.int
-        |> DecodePipe.required "nav_tile_id" Decode.int
+        |> DecodePipe.required "nav_group_id" Decode.string
+        |> DecodePipe.required "nav_tile_id" Decode.string
         |> DecodePipe.required "store_id" Decode.int
 
 
@@ -589,11 +623,11 @@ connectionEncoder : TileConnection -> Encode.Value
 connectionEncoder g =
     let
         attributes =
-            [ ( "id", Encode.int g.id )
+            [ ( "id", Encode.string g.id )
             , ( "target", Encode.int g.target )
             , ( "sort_order", Encode.int g.sort_order )
-            , ( "nav_group_id", Encode.int g.nav_group_id )
-            , ( "nav_tile_id", Encode.int g.nav_tile_id )
+            , ( "nav_group_id", Encode.string g.nav_group_id )
+            , ( "nav_tile_id", Encode.string g.nav_tile_id )
             , ( "store_id", Encode.int g.store_id )
             ]
     in
@@ -611,7 +645,7 @@ loadTiles : Cmd Msg
 loadTiles =
     let
         url =
-            "http://localhost:3000/tiles"
+            apiBase ++ "tiles"
 
         request =
             Http.get url tilesDecoder
@@ -623,7 +657,7 @@ loadGroups : Cmd Msg
 loadGroups =
     let
         url =
-            "http://localhost:3000/groups"
+            apiBase ++ "groups"
 
         request =
             Http.get url groupsDecoder
@@ -635,7 +669,7 @@ loadConnections : Cmd Msg
 loadConnections =
     let
         url =
-            "http://localhost:3000/connections"
+            apiBase ++ "connections"
 
         request =
             Http.get url connectionsDecoder
@@ -647,7 +681,7 @@ saveTile : Tile -> Cmd Msg
 saveTile tile =
     let
         url =
-            "http://localhost:3000/tiles"
+            apiBase ++ "tiles"
 
         body =
             tileEncoder tile |> Http.jsonBody
@@ -662,7 +696,7 @@ saveGroup : TileGroup -> Cmd Msg
 saveGroup g =
     let
         url =
-            "http://localhost:3000/groups"
+            apiBase ++ "groups"
 
         body =
             groupEncoder g |> Http.jsonBody
@@ -677,7 +711,7 @@ saveConnection : TileConnection -> Cmd Msg
 saveConnection g =
     let
         url =
-            "http://localhost:3000/connections"
+            apiBase ++ "connections"
 
         body =
             connectionEncoder g |> Http.jsonBody
@@ -688,11 +722,11 @@ saveConnection g =
         Http.send ReqSaveConnection request
 
 
-deleteItem : String -> Int -> Cmd Msg
+deleteItem : String -> String -> Cmd Msg
 deleteItem itemType id =
     let
         url =
-            "http://localhost/" ++ itemType ++ "/" ++ (toString id)
+            apiBase ++ itemType ++ "/" ++ id
 
         req =
             Http.request
