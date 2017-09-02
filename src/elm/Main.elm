@@ -157,6 +157,15 @@ update msg model =
             in
                 { model | currentGroup = newGroup }
 
+        LoadTiles (Ok tiles) ->
+            { model | tiles = tiles }
+
+        LoadGroups (Ok groups) ->
+            { model | groups = groups }
+
+        LoadConnections (Ok conns) ->
+            { model | connections = conns }
+
         _ ->
             model
 
