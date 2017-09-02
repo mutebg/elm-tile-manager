@@ -4,6 +4,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onCheck)
 import Select
+import Json.Decode as Decode
+import Json.Decode.Pipeline as DecodePipe
 
 
 -- APP
@@ -319,3 +321,71 @@ listGroupItem group =
         , button [] [ text "Edit" ]
         , button [] [ text "Delete" ]
         ]
+
+
+tilesDecoder : Decode.Decoder (List Tile)
+tilesDecoder =
+    Decode.list tileDecoder
+
+
+tileDecoder : Decode.Decoder Tile
+tileDecoder =
+    DecodePipe.decode Tile
+        |> DecodePipe.required "id" Decode.int
+        |> DecodePipe.required "created" Decode.string
+        |> DecodePipe.required "modified" Decode.string
+        |> DecodePipe.required "name" Decode.string
+        |> DecodePipe.required "image_url" Decode.string
+        |> DecodePipe.required "type_" tileTypeDecoder
+        |> DecodePipe.required "action" Decode.string
+        |> DecodePipe.required "active" Decode.bool
+
+
+tileTypeDecoder : Decode.Decoder TileType
+tileTypeDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "Link" ->
+                        Decode.succeed Link
+
+                    "News" ->
+                        Decode.succeed News
+
+                    _ ->
+                        Decode.fail <| "Unknown type"
+            )
+
+
+groupsDecoder : Decode.Decoder (List TileGroup)
+groupsDecoder =
+    Decode.list groupDecoder
+
+
+groupDecoder : Decode.Decoder TileGroup
+groupDecoder =
+    DecodePipe.decode TileGroup
+        |> DecodePipe.required "id" Decode.int
+        |> DecodePipe.required "created" Decode.string
+        |> DecodePipe.required "modified" Decode.string
+        |> DecodePipe.required "name" Decode.string
+        |> DecodePipe.required "slug" Decode.string
+        |> DecodePipe.required "position" groupPositionDecoder
+
+
+groupPositionDecoder : Decode.Decoder TileGroupsPosition
+groupPositionDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "Main" ->
+                        Decode.succeed Main
+
+                    "Context" ->
+                        Decode.succeed Context
+
+                    _ ->
+                        Decode.fail <| "Unknown type"
+            )
