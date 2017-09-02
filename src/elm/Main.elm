@@ -3,9 +3,11 @@ module Main exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onCheck)
+import Http
 import Select
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipe
+import Json.Encode as Encode
 
 
 -- APP
@@ -57,7 +59,7 @@ type alias TileGroup =
     }
 
 
-type alias TypeConnection =
+type alias TileConnection =
     { id : Int
     , created : String
     , modified : String
@@ -76,6 +78,12 @@ type FormMessage
     | SelectTileType TileType
 
 
+type alias MessageResponse =
+    { code : Int
+    , message : String
+    }
+
+
 
 -- MODEL
 
@@ -86,7 +94,7 @@ type alias Model =
     , currentTile : Maybe Tile
     , groups : List TileGroup
     , currentGroup : Maybe TileGroup
-    , connections : List TypeConnection
+    , connections : List TileConnection
     }
 
 
@@ -113,6 +121,13 @@ type Msg
     | SaveExistingTile Tile
     | UpdateTileField FormMessage
     | UpdateGroupField FormMessage
+    | LoadTiles (Result Http.Error (List Tile))
+    | LoadGroups (Result Http.Error (List TileGroup))
+    | LoadConnections (Result Http.Error (List TileConnection))
+    | ReqSaveTile (Result Http.Error Tile)
+    | ReqSaveGroup (Result Http.Error TileGroup)
+    | ReqSaveConnection (Result Http.Error TileConnection)
+    | ReqDelete String (Result Http.Error MessageResponse)
 
 
 update : Msg -> Model -> Model
@@ -341,6 +356,21 @@ tileDecoder =
         |> DecodePipe.required "active" Decode.bool
 
 
+tileEncoder : Tile -> Encode.Value
+tileEncoder tile =
+    let
+        attributes =
+            [ ( "id", Encode.int tile.id )
+            , ( "name", Encode.string tile.name )
+            , ( "image_url", Encode.string tile.image_url )
+            , ( "type_", Encode.string <| toString tile.type_ )
+            , ( "action", Encode.string tile.action )
+            , ( "active", Encode.bool tile.active )
+            ]
+    in
+        Encode.object attributes
+
+
 tileTypeDecoder : Decode.Decoder TileType
 tileTypeDecoder =
     Decode.string
@@ -389,3 +419,157 @@ groupPositionDecoder =
                     _ ->
                         Decode.fail <| "Unknown type"
             )
+
+
+groupEncoder : TileGroup -> Encode.Value
+groupEncoder g =
+    let
+        attributes =
+            [ ( "id", Encode.int g.id )
+            , ( "name", Encode.string g.name )
+            , ( "slug", Encode.string g.slug )
+            , ( "position", Encode.string <| toString g.position )
+            ]
+    in
+        Encode.object attributes
+
+
+connectionsDecoder : Decode.Decoder (List TileConnection)
+connectionsDecoder =
+    Decode.list connectionDecoder
+
+
+connectionDecoder : Decode.Decoder TileConnection
+connectionDecoder =
+    DecodePipe.decode TileConnection
+        |> DecodePipe.required "id" Decode.int
+        |> DecodePipe.required "created" Decode.string
+        |> DecodePipe.required "modified" Decode.string
+        |> DecodePipe.required "target" Decode.int
+        |> DecodePipe.required "sort_order" Decode.int
+        |> DecodePipe.required "nav_group_id" Decode.int
+        |> DecodePipe.required "nav_tile_id" Decode.int
+        |> DecodePipe.required "store_id" Decode.int
+
+
+connectionEncoder : TileConnection -> Encode.Value
+connectionEncoder g =
+    let
+        attributes =
+            [ ( "id", Encode.int g.id )
+            , ( "target", Encode.int g.target )
+            , ( "sort_order", Encode.int g.sort_order )
+            , ( "nav_group_id", Encode.int g.nav_group_id )
+            , ( "nav_tile_id", Encode.int g.nav_tile_id )
+            , ( "store_id", Encode.int g.store_id )
+            ]
+    in
+        Encode.object attributes
+
+
+messageDecoder : Decode.Decoder MessageResponse
+messageDecoder =
+    DecodePipe.decode MessageResponse
+        |> DecodePipe.required "code" Decode.int
+        |> DecodePipe.required "message" Decode.string
+
+
+loadTiles : Cmd Msg
+loadTiles =
+    let
+        url =
+            "http://localhost:3000/tiles"
+
+        request =
+            Http.get url tilesDecoder
+    in
+        Http.send LoadTiles request
+
+
+loadGroups : Cmd Msg
+loadGroups =
+    let
+        url =
+            "http://localhost:3000/groups"
+
+        request =
+            Http.get url groupsDecoder
+    in
+        Http.send LoadGroups request
+
+
+loadConnections : Cmd Msg
+loadConnections =
+    let
+        url =
+            "http://localhost:3000/connections"
+
+        request =
+            Http.get url connectionsDecoder
+    in
+        Http.send LoadConnections request
+
+
+saveTile : Tile -> Cmd Msg
+saveTile tile =
+    let
+        url =
+            "http://localhost:3000/tiles"
+
+        body =
+            tileEncoder tile |> Http.jsonBody
+
+        request =
+            Http.post url body tileDecoder
+    in
+        Http.send ReqSaveTile request
+
+
+saveGroup : TileGroup -> Cmd Msg
+saveGroup g =
+    let
+        url =
+            "http://localhost:3000/groups"
+
+        body =
+            groupEncoder g |> Http.jsonBody
+
+        request =
+            Http.post url body groupDecoder
+    in
+        Http.send ReqSaveGroup request
+
+
+saveConnection : TileConnection -> Cmd Msg
+saveConnection g =
+    let
+        url =
+            "http://localhost:3000/connections"
+
+        body =
+            connectionEncoder g |> Http.jsonBody
+
+        request =
+            Http.post url body connectionDecoder
+    in
+        Http.send ReqSaveConnection request
+
+
+deleteItem : String -> Int -> Cmd Msg
+deleteItem itemType id =
+    let
+        url =
+            "http://localhost/" ++ itemType ++ (toString id)
+
+        req =
+            Http.request
+                { method = "DELETE"
+                , body = Http.emptyBody
+                , url = url
+                , expect = Http.expectJson messageDecoder
+                , headers = []
+                , timeout = Nothing
+                , withCredentials = False
+                }
+    in
+        Http.send (\res -> ReqDelete itemType res) req
