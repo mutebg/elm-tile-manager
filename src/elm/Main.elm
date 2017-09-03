@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onCheck)
+import Html.Events exposing (onClick, onInput, onCheck, onSubmit)
 import Http
 import Select
 import Dict
@@ -49,6 +49,7 @@ type Page
     | ConnectTile String
     | AddGroup
     | EditGroup String
+    | ConnectGroup String
     | Delete String String
 
 
@@ -61,6 +62,7 @@ routeParse =
         , Url.map ConnectTile (Url.s "tile-connect" </> Url.string)
         , Url.map AddGroup (Url.s "group-add")
         , Url.map EditGroup (Url.s "group-edit" </> Url.string)
+        , Url.map ConnectGroup (Url.s "group-connect" </> Url.string)
         , Url.map Delete (Url.s "delete" </> Url.string </> Url.string)
         ]
 
@@ -122,6 +124,16 @@ type alias MessageResponse =
     }
 
 
+targetDesktop : number
+targetDesktop =
+    1
+
+
+targetMobile : number
+targetMobile =
+    2
+
+
 
 -- MODEL
 
@@ -133,6 +145,7 @@ type alias Model =
     , groups : List TileGroup
     , currentGroup : Maybe TileGroup
     , connections : List TileConnection
+    , currentConnection : Maybe TileConnection
     }
 
 
@@ -144,6 +157,7 @@ model =
     , groups = []
     , currentGroup = Nothing
     , connections = []
+    , currentConnection = Nothing
     }
 
 
@@ -157,9 +171,11 @@ type Msg
     | NewUrl String
     | SaveTile Tile
     | SaveGroup TileGroup
+    | SaveConnection TileConnection
     | DeleteItem String String
     | UpdateTileField FormMessage
     | UpdateGroupField FormMessage
+    | UpdateConnectionField FormMessage
     | LoadTiles (Result Http.Error (List Tile))
     | LoadGroups (Result Http.Error (List TileGroup))
     | LoadConnections (Result Http.Error (List TileConnection))
@@ -194,6 +210,13 @@ update msg model =
                                         |> List.filter (\t -> t.id == id)
                                         |> List.head
                             }
+
+                        ConnectTile id ->
+                            let
+                                conn =
+                                    { emptyConnection | nav_tile_id = id }
+                            in
+                                { model | currentConnection = Just conn }
 
                         AddGroup ->
                             { model | currentGroup = Just emptyGroup }
@@ -247,6 +270,20 @@ update msg model =
                 , Cmd.none
                 )
 
+        UpdateConnectionField message ->
+            let
+                newConn =
+                    case model.currentConnection of
+                        Just g ->
+                            Just (updateConnection g message)
+
+                        _ ->
+                            model.currentConnection
+            in
+                ( { model | currentConnection = newConn }
+                , Cmd.none
+                )
+
         LoadTiles (Ok tiles) ->
             ( { model | tiles = tiles }
             , Cmd.none
@@ -268,6 +305,9 @@ update msg model =
         SaveGroup g ->
             ( model, saveGroup g )
 
+        SaveConnection c ->
+            ( model, saveConnection c )
+
         DeleteItem item id ->
             ( model, deleteItem item id )
 
@@ -279,6 +319,21 @@ update msg model =
 
         ReqSaveGroup (Ok group) ->
             ( model, Navigation.newUrl "#" )
+
+        ReqSaveConnection (Ok conn) ->
+            let
+                newConn =
+                    case model.page of
+                        ConnectTile id ->
+                            { emptyConnection | nav_tile_id = id }
+
+                        _ ->
+                            emptyConnection
+            in
+                ( { model | currentConnection = Just newConn, connections = conn :: model.connections }, Cmd.none )
+
+        ReqSaveConnection (Err error) ->
+            ( model, Debug.log (toString error) Cmd.none )
 
         ReqDelete itemType (Ok msg) ->
             ( model, Navigation.newUrl "#" )
@@ -330,6 +385,25 @@ updateGroup g message =
             g
 
 
+updateConnection : TileConnection -> FormMessage -> TileConnection
+updateConnection g message =
+    case message of
+        TextInput "nav_group_id" inputValue ->
+            { g | nav_group_id = inputValue }
+
+        TextInput "nav_tile_id" inputValue ->
+            { g | nav_tile_id = inputValue }
+
+        TextInput "target" inputValue ->
+            { g | target = Result.withDefault 0 (String.toInt inputValue) }
+
+        TextInput "sort_order" inputValue ->
+            { g | sort_order = Result.withDefault 0 (String.toInt inputValue) }
+
+        _ ->
+            g
+
+
 
 -- VIEW
 
@@ -346,6 +420,7 @@ view model =
             Home ->
                 div []
                     [ listTiles model.tiles
+                    , hr [] []
                     , listGroups model.groups
                     ]
 
@@ -373,31 +448,41 @@ view model =
                     groupsDict =
                         groupsToDict model.groups
                 in
-                    ul []
-                        (tileConns
-                            |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
-                            |> List.map
-                                (\c ->
-                                    case Dict.get c.nav_group_id groupsDict of
-                                        Just d ->
-                                            li []
-                                                [ text
-                                                    ("Target: "
-                                                        ++ (toString c.target)
-                                                        ++ " Sort order:"
-                                                        ++ (toString c.sort_order)
-                                                        ++ " Position:"
-                                                        ++ (toString d.position)
-                                                        ++ " Name:"
-                                                        ++ (toString d.name)
-                                                    )
-                                                , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
-                                                ]
+                    div []
+                        [ ul []
+                            (tileConns
+                                |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
+                                |> List.map
+                                    (\c ->
+                                        case Dict.get c.nav_group_id groupsDict of
+                                            Just d ->
+                                                li []
+                                                    [ text
+                                                        ("Target: "
+                                                            ++ (toString c.target)
+                                                            ++ " Sort order:"
+                                                            ++ (toString c.sort_order)
+                                                            ++ " Position:"
+                                                            ++ (toString d.position)
+                                                            ++ " Name:"
+                                                            ++ (toString d.name)
+                                                        )
+                                                    , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                    ]
 
-                                        _ ->
-                                            text ""
-                                )
-                        )
+                                            _ ->
+                                                text ""
+                                    )
+                            )
+                        , div []
+                            [ case model.currentConnection of
+                                Just conn ->
+                                    connectionForm model.tiles model.groups conn
+
+                                _ ->
+                                    text ""
+                            ]
+                        ]
 
             AddGroup ->
                 case model.currentGroup of
@@ -433,6 +518,30 @@ emptyTile =
     , type_ = Link
     , action = ""
     , active = False
+    }
+
+
+emptyGroup : TileGroup
+emptyGroup =
+    { id = ""
+    , created = ""
+    , modified = ""
+    , name = ""
+    , slug = ""
+    , position = Main
+    }
+
+
+emptyConnection : TileConnection
+emptyConnection =
+    { id = ""
+    , created = ""
+    , modified = ""
+    , target = 1
+    , sort_order = 0
+    , nav_group_id = ""
+    , nav_tile_id = ""
+    , store_id = 0
     }
 
 
@@ -481,17 +590,6 @@ tileForm tile =
             ]
 
 
-emptyGroup : TileGroup
-emptyGroup =
-    { id = ""
-    , created = ""
-    , modified = ""
-    , name = ""
-    , slug = ""
-    , position = Main
-    }
-
-
 groupForm : TileGroup -> Html Msg
 groupForm g =
     let
@@ -517,6 +615,70 @@ groupForm g =
             ]
 
 
+connectionForm : List Tile -> List TileGroup -> TileConnection -> Html Msg
+connectionForm tiles groups conn =
+    let
+        targets =
+            [ ( "1", "Desktop" ), ( "2", "Mobile" ) ]
+
+        tilesTuple =
+            List.map (\t -> ( t.id, t.name )) tiles
+
+        tileValues =
+            if conn.nav_tile_id == "" then
+                ( "", "---" ) :: tilesTuple
+            else
+                tilesTuple
+
+        groupTuple =
+            List.map (\v -> ( v.id, v.name )) groups
+
+        groupValues =
+            if conn.nav_group_id == "" then
+                ( "", "---" ) :: groupTuple
+            else
+                groupTuple
+    in
+        Html.form [ onSubmit (SaveConnection conn) ]
+            [ div [ class "form-group" ]
+                [ label [] [ text "Tiles" ]
+                , select
+                    [ onInput (\val -> UpdateConnectionField (TextInput "nav_tile_id" val))
+                    , required True
+                    ]
+                    (tupleToSelectOptions tileValues conn.nav_tile_id)
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Groups" ]
+                , select
+                    [ onInput (\val -> UpdateConnectionField (TextInput "nav_group_id" val))
+                    , required True
+                    ]
+                    (tupleToSelectOptions groupValues conn.nav_group_id)
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Sort order" ]
+                , input
+                    [ class "form-control"
+                    , type_ "number"
+                    , value <| toString conn.sort_order
+                    , onInput (\val -> UpdateConnectionField (TextInput "sort_order" val))
+                    ]
+                    []
+                ]
+            , div [ class "form-group" ]
+                [ label [] [ text "Target" ]
+                , select
+                    [ onInput (\val -> UpdateConnectionField (TextInput "target" val))
+                    ]
+                    (tupleToSelectOptions targets (toString conn.target))
+                ]
+            , div []
+                [ button [ class "btn btn-primary" ] [ text "Save" ]
+                ]
+            ]
+
+
 listTiles : List Tile -> Html Msg
 listTiles tiles =
     ul [] (List.map listTileItem tiles)
@@ -525,7 +687,7 @@ listTiles tiles =
 listTileItem : Tile -> Html Msg
 listTileItem tile =
     li []
-        [ h1 [] [ text tile.name ]
+        [ h3 [] [ text tile.name ]
         , a [ href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
         , a [ href <| "#tile-connect/" ++ tile.id ] [ text "Connect" ]
         , a [ href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
@@ -540,8 +702,9 @@ listGroups groups =
 listGroupItem : TileGroup -> Html Msg
 listGroupItem group =
     li []
-        [ h1 [] [ text group.name ]
+        [ h3 [] [ text group.name ]
         , a [ href <| "#group-edit/" ++ group.id ] [ text "Edit" ]
+        , a [ href <| "#group-connect/" ++ group.id ] [ text "Connect" ]
         , a [ href <| "#delete/groups/" ++ group.id ] [ text "Delete" ]
         ]
 
@@ -794,3 +957,9 @@ deleteItem itemType id =
                 }
     in
         Http.send (\res -> ReqDelete itemType res) req
+
+
+tupleToSelectOptions : List ( String, String ) -> String -> List (Html Msg)
+tupleToSelectOptions values selectedValue =
+    values
+        |> List.map (\z -> option [ value <| Tuple.first z, selected (selectedValue == (Tuple.first z)) ] [ text <| Tuple.second z ])
