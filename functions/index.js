@@ -54,17 +54,47 @@ app.use(cors());
 //app.use(bodyParser.json()); // for parsing application/json
 //app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
+const getValues = (type, req) => {
+  const modified = new Date() + "";
+  switch (type) {
+    case "tiles": {
+      const name = req.body.name;
+      const image_url = req.body.image_url;
+      const type_ = req.body.type_;
+      const action = req.body.action;
+      const active = req.body.active;
+      return { name, image_url, type_, action, active, modified };
+    }
+    case "groups": {
+      const name = req.body.name;
+      const slug = req.body.slug;
+      const position = req.body.position;
+      return { name, slug, position, modified };
+    }
+    case "connections": {
+      const target = req.body.target;
+      const sort_order = req.body.sort_order;
+      const nav_group_id = req.body.nav_group_id;
+      const nav_tile_id = req.body.nav_tile_id;
+      const store_id = req.body.store_id;
+      return {
+        target,
+        sort_order,
+        nav_tile_id,
+        nav_group_id,
+        store_id,
+        modified
+      };
+    }
+  }
+};
+
 // POST /api/receipts
 // Create a new receipts
-app.post("/tiles", (req, res) => {
+app.post("/:type", (req, res) => {
   const id = req.body.id;
-  const name = req.body.name;
-  const image_url = req.body.image_url;
-  const type_ = req.body.type_;
-  const action = req.body.action;
-  const active = req.body.active;
-  const modified = new Date() + "";
-  const data = { name, image_url, type_, action, active, modified };
+  const type = req.params.type;
+  const data = getValues(type, req);
 
   if (!id) {
     console.log("CREAT");
@@ -72,7 +102,7 @@ app.post("/tiles", (req, res) => {
     console.log(data);
     admin
       .database()
-      .ref(`/tiles`)
+      .ref(`/${type}`)
       .push(data)
       .then(snapshot => {
         return snapshot.ref.once("value");
@@ -82,19 +112,38 @@ app.post("/tiles", (req, res) => {
         res.status(201).json(val);
       })
       .catch(error => {
-        console.log("Error detecting sentiment or saving Tiles", error.message);
+        console.log(
+          `Error detecting sentiment or saving ${type}`,
+          error.message
+        );
         res.sendStatus(500);
       });
   } else {
-    console.log("UPDATE");
-    //res.status(201).json(data);
-    res.sendStatus(500);
+    admin
+      .database()
+      .ref(`/${type}/${id}`)
+      .update(data)
+      .then(() => {
+        admin.database().ref(`/${type}/${id}`).once("value").then(snapshot => {
+          return res
+            .status(200)
+            .json(Object.assign({}, { id: id }, snapshot.val()));
+        });
+      })
+      .catch(error => {
+        console.log(
+          `Error detecting sentiment or saving ${type}`,
+          error.message
+        );
+        res.sendStatus(500);
+      });
   }
 });
 
 // Get all receipts
-app.get("/tiles", (req, res) => {
-  let query = admin.database().ref(`/tiles`);
+app.get("/:type", (req, res) => {
+  const type = req.params.type;
+  let query = admin.database().ref(`/${type}`);
   query
     .once("value")
     .then(snapshot => {
@@ -114,18 +163,20 @@ app.get("/tiles", (req, res) => {
 });
 
 // Delete recept
-app.delete("/tiles/:id", (req, res) => {
+app.delete("/:type/:id", (req, res) => {
+  const type = req.params.type;
+
   admin
     .database()
-    .ref(`/tiles/${req.params.id}`)
+    .ref(`/${type}/${req.params.id}`)
     .remove()
     .then(() => {
       return res
         .status(200)
-        .json({ code: 0, message: "Tile has been deleted" });
+        .json({ code: 0, message: `${type} has been deleted` });
     })
     .catch(error => {
-      console.log("Error deleting Tile", id, error.message);
+      console.log(`Error deleting ${type}`, id, error.message);
       res.sendStatus(500);
     });
 });

@@ -5,6 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onCheck)
 import Http
 import Select
+import Dict
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipe
 import Json.Encode as Encode
@@ -45,6 +46,7 @@ type Page
     | Home
     | AddTile
     | EditTile String
+    | ConnectTile String
     | AddGroup
     | EditGroup String
     | Delete String String
@@ -56,6 +58,7 @@ routeParse =
         [ Url.map Home top
         , Url.map AddTile (Url.s "tile-add")
         , Url.map EditTile (Url.s "tile-edit" </> Url.string)
+        , Url.map ConnectTile (Url.s "tile-connect" </> Url.string)
         , Url.map AddGroup (Url.s "group-add")
         , Url.map EditGroup (Url.s "group-edit" </> Url.string)
         , Url.map Delete (Url.s "delete" </> Url.string </> Url.string)
@@ -271,6 +274,9 @@ update msg model =
         ReqSaveTile (Ok tile) ->
             ( model, Navigation.newUrl "#" )
 
+        ReqSaveTile (Err error) ->
+            ( model, Debug.log (toString error) Cmd.none )
+
         ReqSaveGroup (Ok group) ->
             ( model, Navigation.newUrl "#" )
 
@@ -358,6 +364,40 @@ view model =
 
                     _ ->
                         text "None"
+
+            ConnectTile id ->
+                let
+                    tileConns =
+                        getTileConns id model.connections
+
+                    groupsDict =
+                        groupsToDict model.groups
+                in
+                    ul []
+                        (tileConns
+                            |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
+                            |> List.map
+                                (\c ->
+                                    case Dict.get c.nav_group_id groupsDict of
+                                        Just d ->
+                                            li []
+                                                [ text
+                                                    ("Target: "
+                                                        ++ (toString c.target)
+                                                        ++ " Sort order:"
+                                                        ++ (toString c.sort_order)
+                                                        ++ " Position:"
+                                                        ++ (toString d.position)
+                                                        ++ " Name:"
+                                                        ++ (toString d.name)
+                                                    )
+                                                , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                ]
+
+                                        _ ->
+                                            text ""
+                                )
+                        )
 
             AddGroup ->
                 case model.currentGroup of
@@ -487,6 +527,7 @@ listTileItem tile =
     li []
         [ h1 [] [ text tile.name ]
         , a [ href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
+        , a [ href <| "#tile-connect/" ++ tile.id ] [ text "Connect" ]
         , a [ href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
         ]
 
@@ -500,9 +541,22 @@ listGroupItem : TileGroup -> Html Msg
 listGroupItem group =
     li []
         [ h1 [] [ text group.name ]
-        , button [] [ text "Edit" ]
-        , button [] [ text "Delete" ]
+        , a [ href <| "#group-edit/" ++ group.id ] [ text "Edit" ]
+        , a [ href <| "#delete/groups/" ++ group.id ] [ text "Delete" ]
         ]
+
+
+getTileConns : String -> List TileConnection -> List TileConnection
+getTileConns tileId conns =
+    conns
+        |> List.filter (\c -> c.nav_tile_id == tileId)
+
+
+groupsToDict : List TileGroup -> Dict.Dict String TileGroup
+groupsToDict groups =
+    groups
+        |> List.map (\k -> ( k.id, k ))
+        |> Dict.fromList
 
 
 tilesDecoder : Decode.Decoder (List Tile)
