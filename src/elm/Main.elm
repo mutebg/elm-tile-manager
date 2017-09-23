@@ -46,7 +46,7 @@ type Page
     | Home
     | AddTile
     | EditTile String
-    | ConnectTile String
+    | ConnectTile String String
     | AddGroup
     | EditGroup String
     | ConnectGroup String
@@ -59,7 +59,7 @@ routeParse =
         [ Url.map Home top
         , Url.map AddTile (Url.s "tile-add")
         , Url.map EditTile (Url.s "tile-edit" </> Url.string)
-        , Url.map ConnectTile (Url.s "tile-connect" </> Url.string)
+        , Url.map ConnectTile (Url.s "connect" </> Url.string </> Url.string)
         , Url.map AddGroup (Url.s "group-add")
         , Url.map EditGroup (Url.s "group-edit" </> Url.string)
         , Url.map ConnectGroup (Url.s "group-connect" </> Url.string)
@@ -211,10 +211,10 @@ update msg model =
                                         |> List.head
                             }
 
-                        ConnectTile id ->
+                        ConnectTile tile_id group_id ->
                             let
                                 conn =
-                                    { emptyConnection | nav_tile_id = id }
+                                    { emptyConnection | nav_tile_id = tile_id, nav_group_id = group_id }
                             in
                                 { model | currentConnection = Just conn }
 
@@ -324,8 +324,8 @@ update msg model =
             let
                 newConn =
                     case model.page of
-                        ConnectTile id ->
-                            { emptyConnection | nav_tile_id = id }
+                        ConnectTile tile_id group_id ->
+                            { emptyConnection | nav_tile_id = tile_id, nav_group_id = group_id }
 
                         _ ->
                             emptyConnection
@@ -440,10 +440,10 @@ view model =
                     _ ->
                         text "None"
 
-            ConnectTile id ->
+            ConnectTile tile_id group_id ->
                 let
                     tileConns =
-                        getTileConns id model.connections
+                        getTileConns tile_id model.connections
 
                     groupsDict =
                         groupsToDict model.groups
@@ -625,7 +625,7 @@ connectionForm tiles groups conn =
             List.map (\t -> ( t.id, t.name )) tiles
 
         tileValues =
-            if conn.nav_tile_id == "" then
+            if conn.nav_tile_id == "" || conn.nav_tile_id == "-" then
                 ( "", "---" ) :: tilesTuple
             else
                 tilesTuple
@@ -634,7 +634,7 @@ connectionForm tiles groups conn =
             List.map (\v -> ( v.id, v.name )) groups
 
         groupValues =
-            if conn.nav_group_id == "" then
+            if conn.nav_group_id == "" || conn.nav_group_id == "-" then
                 ( "", "---" ) :: groupTuple
             else
                 groupTuple
@@ -689,7 +689,7 @@ listTileItem tile =
     li []
         [ h3 [] [ text tile.name ]
         , a [ href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
-        , a [ href <| "#tile-connect/" ++ tile.id ] [ text "Connect" ]
+        , a [ href <| "#connect/" ++ tile.id ++ "/-" ] [ text "Connect" ]
         , a [ href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
         ]
 
@@ -704,7 +704,7 @@ listGroupItem group =
     li []
         [ h3 [] [ text group.name ]
         , a [ href <| "#group-edit/" ++ group.id ] [ text "Edit" ]
-        , a [ href <| "#group-connect/" ++ group.id ] [ text "Connect" ]
+        , a [ href <| "#connect/-/" ++ group.id ] [ text "Connect" ]
         , a [ href <| "#delete/groups/" ++ group.id ] [ text "Delete" ]
         ]
 
