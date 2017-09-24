@@ -445,34 +445,69 @@ view model =
                     tileConns =
                         getTileConns tile_id model.connections
 
+                    groupConns =
+                        getGroupConns group_id model.connections
+
                     groupsDict =
                         groupsToDict model.groups
+
+                    tilesDict =
+                        tilesToDict model.tiles
+
+                    tilesList =
+                        tileConns
+                            |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
+                            |> List.map
+                                (\c ->
+                                    case Dict.get c.nav_group_id groupsDict of
+                                        Just d ->
+                                            li []
+                                                [ text
+                                                    ("Target: "
+                                                        ++ (toString c.target)
+                                                        ++ " Sort order:"
+                                                        ++ (toString c.sort_order)
+                                                        ++ " Position:"
+                                                        ++ (toString d.position)
+                                                        ++ " Name:"
+                                                        ++ (toString d.name)
+                                                    )
+                                                , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                ]
+
+                                        _ ->
+                                            text ""
+                                )
+
+                    grpupList =
+                        groupConns
+                            |> List.filter (\c -> Dict.get c.nav_tile_id tilesDict /= Nothing)
+                            |> List.map
+                                (\c ->
+                                    case Dict.get c.nav_tile_id tilesDict of
+                                        Just d ->
+                                            li []
+                                                [ text
+                                                    ("Target: "
+                                                        ++ (toString c.target)
+                                                        ++ " Sort order:"
+                                                        ++ (toString c.sort_order)
+                                                        ++ " Name:"
+                                                        ++ (toString d.name)
+                                                    )
+                                                , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                ]
+
+                                        _ ->
+                                            text ""
+                                )
                 in
                     div []
                         [ ul []
-                            (tileConns
-                                |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
-                                |> List.map
-                                    (\c ->
-                                        case Dict.get c.nav_group_id groupsDict of
-                                            Just d ->
-                                                li []
-                                                    [ text
-                                                        ("Target: "
-                                                            ++ (toString c.target)
-                                                            ++ " Sort order:"
-                                                            ++ (toString c.sort_order)
-                                                            ++ " Position:"
-                                                            ++ (toString d.position)
-                                                            ++ " Name:"
-                                                            ++ (toString d.name)
-                                                        )
-                                                    , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
-                                                    ]
-
-                                            _ ->
-                                                text ""
-                                    )
+                            (if group_id == "-" then
+                                tilesList
+                             else
+                                grpupList
                             )
                         , div []
                             [ case model.currentConnection of
@@ -715,9 +750,22 @@ getTileConns tileId conns =
         |> List.filter (\c -> c.nav_tile_id == tileId)
 
 
+getGroupConns : String -> List TileConnection -> List TileConnection
+getGroupConns group_id conns =
+    conns
+        |> List.filter (\c -> c.nav_group_id == group_id)
+
+
 groupsToDict : List TileGroup -> Dict.Dict String TileGroup
 groupsToDict groups =
     groups
+        |> List.map (\k -> ( k.id, k ))
+        |> Dict.fromList
+
+
+tilesToDict : List Tile -> Dict.Dict String Tile
+tilesToDict tiles =
+    tiles
         |> List.map (\k -> ( k.id, k ))
         |> Dict.fromList
 
