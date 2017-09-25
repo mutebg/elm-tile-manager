@@ -410,136 +410,144 @@ updateConnection g message =
 
 view : Model -> Html Msg
 view model =
-    div [ class "container" ]
-        [ div []
-            [ a [ href "#" ] [ text "Home" ]
-            , a [ href "#tile-add" ] [ text "Add tile" ]
-            , a [ href "#group-add" ] [ text "Add group" ]
-            ]
-        , case model.page of
-            Home ->
-                div []
-                    [ listTiles model.tiles
-                    , hr [] []
-                    , listGroups model.groups
+    div []
+        [ nav [ class "navbar navbar-default" ]
+            [ div [ class "container-fluid" ]
+                [ a [ class "navbar-brand", href "#" ]
+                    [ text "Dashboard" ]
+                , ul [ class "nav navbar-nav" ]
+                    [ li [] [ a [ href "#" ] [ text "Home" ] ]
+                    , li [] [ a [ href "#tile-add" ] [ text "Add tile" ] ]
+                    , li [] [ a [ href "#group-add" ] [ text "Add group" ] ]
                     ]
-
-            AddTile ->
-                case model.currentTile of
-                    Just g ->
-                        tileForm g
-
-                    _ ->
-                        text "None"
-
-            EditTile id ->
-                case model.currentTile of
-                    Just g ->
-                        tileForm g
-
-                    _ ->
-                        text "None"
-
-            ConnectTile tile_id group_id ->
-                let
-                    tileConns =
-                        getTileConns tile_id model.connections
-
-                    groupConns =
-                        getGroupConns group_id model.connections
-
-                    groupsDict =
-                        groupsToDict model.groups
-
-                    tilesDict =
-                        tilesToDict model.tiles
-
-                    tilesList =
-                        tileConns
-                            |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
-                            |> List.map
-                                (\c ->
-                                    case Dict.get c.nav_group_id groupsDict of
-                                        Just d ->
-                                            li []
-                                                [ text
-                                                    ("Target: "
-                                                        ++ (toString c.target)
-                                                        ++ " Sort order:"
-                                                        ++ (toString c.sort_order)
-                                                        ++ " Position:"
-                                                        ++ (toString d.position)
-                                                        ++ " Name:"
-                                                        ++ (toString d.name)
-                                                    )
-                                                , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
-                                                ]
-
-                                        _ ->
-                                            text ""
-                                )
-
-                    grpupList =
-                        groupConns
-                            |> List.filter (\c -> Dict.get c.nav_tile_id tilesDict /= Nothing)
-                            |> List.map
-                                (\c ->
-                                    case Dict.get c.nav_tile_id tilesDict of
-                                        Just d ->
-                                            li []
-                                                [ text
-                                                    ("Target: "
-                                                        ++ (toString c.target)
-                                                        ++ " Sort order:"
-                                                        ++ (toString c.sort_order)
-                                                        ++ " Name:"
-                                                        ++ (toString d.name)
-                                                    )
-                                                , a [ href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
-                                                ]
-
-                                        _ ->
-                                            text ""
-                                )
-                in
+                ]
+            ]
+        , div [ class "container" ]
+            [ case model.page of
+                Home ->
                     div []
-                        [ ul []
-                            (if group_id == "-" then
-                                tilesList
-                             else
-                                grpupList
-                            )
-                        , div []
-                            [ case model.currentConnection of
-                                Just conn ->
-                                    connectionForm model.tiles model.groups conn
-
-                                _ ->
-                                    text ""
-                            ]
+                        [ listTiles model.tiles
+                        , hr [] []
+                        , listGroups model.groups
                         ]
 
-            AddGroup ->
-                case model.currentGroup of
-                    Just g ->
-                        groupForm g
+                AddTile ->
+                    case model.currentTile of
+                        Just g ->
+                            tileForm g
 
-                    _ ->
-                        text "None"
+                        _ ->
+                            text "None"
 
-            EditGroup id ->
-                case model.currentGroup of
-                    Just g ->
-                        groupForm g
+                EditTile id ->
+                    case model.currentTile of
+                        Just g ->
+                            tileForm g
 
-                    _ ->
-                        text "None"
+                        _ ->
+                            text "None"
 
-            Delete itemType id ->
-                deleteModal itemType id
+                ConnectTile tile_id group_id ->
+                    let
+                        tileConns =
+                            getTileConns tile_id model.connections
 
-            _ ->
-                text "No selected page"
+                        groupConns =
+                            getGroupConns group_id model.connections
+
+                        groupsDict =
+                            groupsToDict model.groups
+
+                        tilesDict =
+                            tilesToDict model.tiles
+
+                        tilesList =
+                            tileConns
+                                |> List.filter (\c -> Dict.get c.nav_group_id groupsDict /= Nothing)
+                                |> List.map
+                                    (\c ->
+                                        case Dict.get c.nav_group_id groupsDict of
+                                            Just d ->
+                                                li []
+                                                    [ text
+                                                        ("Target: "
+                                                            ++ (toString c.target)
+                                                            ++ " Sort order:"
+                                                            ++ (toString c.sort_order)
+                                                            ++ " Position:"
+                                                            ++ (toString d.position)
+                                                            ++ " Name:"
+                                                            ++ (toString d.name)
+                                                        )
+                                                    , a [ class "btn btn-danger", href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                    ]
+
+                                            _ ->
+                                                text ""
+                                    )
+
+                        grpupList =
+                            groupConns
+                                |> List.filter (\c -> Dict.get c.nav_tile_id tilesDict /= Nothing)
+                                |> List.map
+                                    (\c ->
+                                        case Dict.get c.nav_tile_id tilesDict of
+                                            Just d ->
+                                                li []
+                                                    [ text
+                                                        ("Target: "
+                                                            ++ (toString c.target)
+                                                            ++ " Sort order:"
+                                                            ++ (toString c.sort_order)
+                                                            ++ " Name:"
+                                                            ++ (toString d.name)
+                                                        )
+                                                    , a [ class "btn btn-danger", href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                    ]
+
+                                            _ ->
+                                                text ""
+                                    )
+                    in
+                        div []
+                            [ ul []
+                                (if group_id == "-" then
+                                    tilesList
+                                 else
+                                    grpupList
+                                )
+                            , div []
+                                [ case model.currentConnection of
+                                    Just conn ->
+                                        connectionForm model.tiles model.groups conn
+
+                                    _ ->
+                                        text ""
+                                ]
+                            ]
+
+                AddGroup ->
+                    case model.currentGroup of
+                        Just g ->
+                            groupForm g
+
+                        _ ->
+                            text "None"
+
+                EditGroup id ->
+                    case model.currentGroup of
+                        Just g ->
+                            groupForm g
+
+                        _ ->
+                            text "None"
+
+                Delete itemType id ->
+                    deleteModal itemType id
+
+                _ ->
+                    text "No selected page"
+            ]
         ]
 
 
@@ -723,9 +731,11 @@ listTileItem : Tile -> Html Msg
 listTileItem tile =
     li []
         [ h3 [] [ text tile.name ]
-        , a [ href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
-        , a [ href <| "#connect/" ++ tile.id ++ "/-" ] [ text "Connect" ]
-        , a [ href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
+        , div [ class "btn-group" ]
+            [ a [ class "btn btn-info", href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
+            , a [ class "btn btn-warning", href <| "#connect/" ++ tile.id ++ "/-" ] [ text "Connect" ]
+            , a [ class "btn btn-danger", href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
+            ]
         ]
 
 
@@ -738,9 +748,11 @@ listGroupItem : TileGroup -> Html Msg
 listGroupItem group =
     li []
         [ h3 [] [ text group.name ]
-        , a [ href <| "#group-edit/" ++ group.id ] [ text "Edit" ]
-        , a [ href <| "#connect/-/" ++ group.id ] [ text "Connect" ]
-        , a [ href <| "#delete/groups/" ++ group.id ] [ text "Delete" ]
+        , div [ class "btn-group" ]
+            [ a [ class "btn btn-info", href <| "#group-edit/" ++ group.id ] [ text "Edit" ]
+            , a [ class "btn btn-warning", href <| "#connect/-/" ++ group.id ] [ text "Connect" ]
+            , a [ class "btn btn-danger", href <| "#delete/groups/" ++ group.id ] [ text "Delete" ]
+            ]
         ]
 
 
