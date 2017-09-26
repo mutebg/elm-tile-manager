@@ -11,6 +11,8 @@ import Json.Decode.Pipeline as DecodePipe
 import Json.Encode as Encode
 import Navigation
 import UrlParser as Url exposing ((</>), (<?>), s, int, stringParam, top)
+import Button exposing (..)
+import Types exposing (..)
 
 
 -- APP
@@ -67,63 +69,6 @@ routeParse =
         ]
 
 
-type TileType
-    = Link
-    | News
-
-
-type TileGroupsPosition
-    = Main
-    | Context
-
-
-type alias Tile =
-    { id : String
-    , created : String
-    , modified : String
-    , name : String
-    , image_url : String
-    , type_ : TileType
-    , action : String
-    , active : Bool
-    }
-
-
-type alias TileGroup =
-    { id : String
-    , created : String
-    , modified : String
-    , name : String
-    , slug : String
-    , position : TileGroupsPosition
-    }
-
-
-type alias TileConnection =
-    { id : String
-    , created : String
-    , modified : String
-    , target : Int
-    , sort_order : Int
-    , nav_group_id : String
-    , nav_tile_id : String
-    , store_id : Int
-    }
-
-
-type FormMessage
-    = TextInput String String
-    | Checkbox String Bool
-    | SelectPosition TileGroupsPosition
-    | SelectTileType TileType
-
-
-type alias MessageResponse =
-    { code : Int
-    , message : String
-    }
-
-
 targetDesktop : number
 targetDesktop =
     1
@@ -163,26 +108,6 @@ model =
 
 
 -- UPDATE
-
-
-type Msg
-    = NoOp
-    | UrlChange Navigation.Location
-    | NewUrl String
-    | SaveTile Tile
-    | SaveGroup TileGroup
-    | SaveConnection TileConnection
-    | DeleteItem String String
-    | UpdateTileField FormMessage
-    | UpdateGroupField FormMessage
-    | UpdateConnectionField FormMessage
-    | LoadTiles (Result Http.Error (List Tile))
-    | LoadGroups (Result Http.Error (List TileGroup))
-    | LoadConnections (Result Http.Error (List TileConnection))
-    | ReqSaveTile (Result Http.Error Tile)
-    | ReqSaveGroup (Result Http.Error TileGroup)
-    | ReqSaveConnection (Result Http.Error TileConnection)
-    | ReqDelete String (Result Http.Error MessageResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -411,17 +336,7 @@ updateConnection g message =
 view : Model -> Html Msg
 view model =
     div []
-        [ nav [ class "navbar navbar-default" ]
-            [ div [ class "container-fluid" ]
-                [ a [ class "navbar-brand", href "#" ]
-                    [ text "Dashboard" ]
-                , ul [ class "nav navbar-nav" ]
-                    [ li [] [ a [ href "#" ] [ text "Home" ] ]
-                    , li [] [ a [ href "#tile-add" ] [ text "Add tile" ] ]
-                    , li [] [ a [ href "#group-add" ] [ text "Add group" ] ]
-                    ]
-                ]
-            ]
+        [ header
         , div [ class "container" ]
             [ case model.page of
                 Home ->
@@ -479,7 +394,7 @@ view model =
                                                             ++ " Name:"
                                                             ++ (toString d.name)
                                                         )
-                                                    , a [ class "btn btn-danger", href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                    , linkRemove <| "#delete/connections/" ++ c.id
                                                     ]
 
                                             _ ->
@@ -502,7 +417,7 @@ view model =
                                                             ++ " Name:"
                                                             ++ (toString d.name)
                                                         )
-                                                    , a [ class "btn btn-danger", href ("#delete/connections/" ++ c.id) ] [ text "delete" ]
+                                                    , linkRemove <| "#delete/connections/" ++ c.id
                                                     ]
 
                                             _ ->
@@ -588,12 +503,27 @@ emptyConnection =
     }
 
 
+header : Html Msg
+header =
+    nav [ class "navbar navbar-default" ]
+        [ div [ class "container-fluid" ]
+            [ a [ class "navbar-brand", href "#" ]
+                [ text "Dashboard" ]
+            , ul [ class "nav navbar-nav" ]
+                [ li [] [ a [ href "#" ] [ text "Home" ] ]
+                , li [] [ a [ href "#tile-add" ] [ text "Add tile" ] ]
+                , li [] [ a [ href "#group-add" ] [ text "Add group" ] ]
+                ]
+            ]
+        ]
+
+
 deleteModal : String -> String -> Html Msg
 deleteModal itemType id =
     div []
         [ h1 [] [ text "Are you sure?" ]
-        , a [ href "#", class "btn btn-secondary" ] [ text "No, go back" ]
-        , button [ class "btn btn-danger", onClick (DeleteItem itemType id) ] [ text "Yes, Delete this item please" ]
+        , linkCancelRemove "#"
+        , btnConfirmRemove (DeleteItem itemType id)
         ]
 
 
@@ -732,9 +662,9 @@ listTileItem tile =
     li []
         [ h3 [] [ text tile.name ]
         , div [ class "btn-group" ]
-            [ a [ class "btn btn-info", href <| "#tile-edit/" ++ tile.id ] [ text "Edit" ]
-            , a [ class "btn btn-warning", href <| "#connect/" ++ tile.id ++ "/-" ] [ text "Connect" ]
-            , a [ class "btn btn-danger", href <| "#delete/tiles/" ++ tile.id ] [ text "Delete" ]
+            [ linkEdit <| "#tile-edit/" ++ tile.id
+            , linkConnect <| "#connect/" ++ tile.id ++ "/-"
+            , linkRemove <| "#delete/tiles/" ++ tile.id
             ]
         ]
 
@@ -749,9 +679,9 @@ listGroupItem group =
     li []
         [ h3 [] [ text group.name ]
         , div [ class "btn-group" ]
-            [ a [ class "btn btn-info", href <| "#group-edit/" ++ group.id ] [ text "Edit" ]
-            , a [ class "btn btn-warning", href <| "#connect/-/" ++ group.id ] [ text "Connect" ]
-            , a [ class "btn btn-danger", href <| "#delete/groups/" ++ group.id ] [ text "Delete" ]
+            [ linkEdit <| "#group-edit/" ++ group.id
+            , linkConnect <| "#connect/-/" ++ group.id
+            , linkRemove <| "#delete/groups/" ++ group.id
             ]
         ]
 
