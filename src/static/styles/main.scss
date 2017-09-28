@@ -1,5 +1,18 @@
-$icon-font-path: '~bootstrap-sass/assets/fonts/bootstrap/';
-@import '~bootstrap-sass/assets/stylesheets/bootstrap/_mixins.scss';
-@import '~bootstrap-sass/assets/stylesheets/_bootstrap.scss';
+$icon-font-path: "~bootstrap-sass/assets/fonts/bootstrap/";
+@import "~bootstrap-sass/assets/stylesheets/bootstrap/_mixins.scss";
+@import "~bootstrap-sass/assets/stylesheets/_bootstrap.scss";
 
 // can add Boostrap overrides, additional Sass/CSS below...
+
+.list-group-item {
+  img {
+    float: left;
+    width: 72px;
+    height: 72px;
+    background: #ccc;
+    margin-right: 16px;
+  }
+
+  h4 {
+  }
+}

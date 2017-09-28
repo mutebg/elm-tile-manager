@@ -326,10 +326,15 @@ view model =
         , div [ class "container" ]
             [ case model.page of
                 Home ->
-                    div []
-                        [ listTiles model.tiles
-                        , hr [] []
-                        , listGroups model.groups
+                    div [ class "row" ]
+                        [ div [ class "col-md-8" ]
+                            [ h2 [] [ text "Tiles" ]
+                            , listTiles model.tiles
+                            ]
+                        , div [ class "col-md-4" ]
+                            [ h2 [] [ text "URLs" ]
+                            , listGroups model.groups
+                            ]
                         ]
 
                 AddTile ->
@@ -640,13 +645,14 @@ connectionForm tiles groups conn =
 
 listTiles : List Tile -> Html Msg
 listTiles tiles =
-    ul [] (List.map listTileItem tiles)
+    ul [ class "list-group" ] (List.map listTileItem tiles)
 
 
 listTileItem : Tile -> Html Msg
 listTileItem tile =
-    li []
-        [ h3 [] [ text tile.name ]
+    li [ class "list-group-item" ]
+        [ img [ class "img-rounded", src tile.image_url ] []
+        , h4 [] [ text tile.name ]
         , div [ class "btn-group" ]
             [ linkEdit <| "#tile-edit/" ++ tile.id
             , linkConnect <| "#connect/" ++ tile.id ++ "/-"
@@ -657,13 +663,13 @@ listTileItem tile =
 
 listGroups : List TileGroup -> Html Msg
 listGroups groups =
-    ul [] (List.map listGroupItem groups)
+    ul [ class "list-group" ] (List.map listGroupItem groups)
 
 
 listGroupItem : TileGroup -> Html Msg
 listGroupItem group =
-    li []
-        [ h3 [] [ text group.name ]
+    li [ class "list-group-item" ]
+        [ h4 [] [ text group.name ]
         , div [ class "btn-group" ]
             [ linkEdit <| "#group-edit/" ++ group.id
             , linkConnect <| "#connect/-/" ++ group.id
