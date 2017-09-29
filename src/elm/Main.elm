@@ -415,14 +415,17 @@ view model =
                                                 text ""
                                     )
                     in
-                        div []
-                            [ ul []
-                                (if group_id == "-" then
-                                    tilesList
-                                 else
-                                    grpupList
-                                )
-                            , div []
+                        div [ class "row" ]
+                            [ div [ class "col-md-8" ]
+                                [ ul []
+                                    (if group_id == "-" then
+                                        tilesList
+                                     else
+                                        grpupList
+                                    )
+                                ]
+                            , div
+                                [ class "col-md-4" ]
                                 [ case model.currentConnection of
                                     Just conn ->
                                         connectionForm model.tiles model.groups conn

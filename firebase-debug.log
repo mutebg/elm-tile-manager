@@ -1,0 +1,69 @@
+[debug] [2017-09-28T06:57:33.242Z] ----------------------------------------------------------------------
+[debug] [2017-09-28T06:57:33.244Z] Command:       /usr/local/Cellar/node/7.4.0/bin/node /usr/local/bin/firebase serve --only functions
+[debug] [2017-09-28T06:57:33.245Z] CLI Version:   3.10.0
+[debug] [2017-09-28T06:57:33.245Z] Platform:      darwin
+[debug] [2017-09-28T06:57:33.245Z] Node Version:  v7.4.0
+[debug] [2017-09-28T06:57:33.245Z] Time:          Thu Sep 28 2017 08:57:33 GMT+0200 (CEST)
+[debug] [2017-09-28T06:57:33.245Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2017-09-28T06:57:33.260Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2017-09-28T06:57:33.260Z] > authorizing via signed-in user
+[debug] [2017-09-28T06:57:33.261Z] > refreshing access token with scopes: ["email","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","openid"]
+[debug] [2017-09-28T06:57:33.262Z] >>> HTTP REQUEST POST https://www.googleapis.com/oauth2/v3/token { refresh_token: '1/Rq8tDs_rZz2Pj10BOGDZMdEhfrzR73dPW3XWEAwZ5BM',
+  client_id: '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com',
+  client_secret: 'j9iVZfS8kkCEFUPaAeJV0sAi',
+  grant_type: 'refresh_token',
+  scope: 'email https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/firebase openid' } 
+ Thu Sep 28 2017 08:57:33 GMT+0200 (CEST)
+[debug] [2017-09-28T06:57:33.431Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T06:57:33.433Z] >>> HTTP REQUEST GET https://admin.firebase.com/v1/projects/tilesmanager-70e8d  
+ Thu Sep 28 2017 08:57:33 GMT+0200 (CEST)
+[debug] [2017-09-28T06:57:34.058Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T06:57:34.059Z] >>> HTTP REQUEST GET https://admin.firebase.com/v1/database/tilesmanager-70e8d/tokens  
+ Thu Sep 28 2017 08:57:34 GMT+0200 (CEST)
+[debug] [2017-09-28T06:57:35.243Z] <<< HTTP RESPONSE 200
+[info] 
+[info] === Serving from '/Users/stoyan/projects/elm-tile-manager'...
+[info] 
+[info] i  functions: Preparing to emulate HTTPS functions. Support for other event types coming soon.
+[debug] [2017-09-28T06:57:35.534Z] >>> HTTP REQUEST GET https://appengine.googleapis.com/v1/apps/tilesmanager-70e8d  
+ Thu Sep 28 2017 08:57:35 GMT+0200 (CEST)
+[debug] [2017-09-28T06:57:35.534Z] >>> HTTP REQUEST GET https://apikeys.googleapis.com/v1/projects/tilesmanager-70e8d/apiKeys  
+ Thu Sep 28 2017 08:57:35 GMT+0200 (CEST)
+[debug] [2017-09-28T06:57:36.277Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T06:57:36.348Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T20:14:49.006Z] ----------------------------------------------------------------------
+[debug] [2017-09-28T20:14:49.008Z] Command:       /usr/local/Cellar/node/7.4.0/bin/node /usr/local/bin/firebase serve --only functions
+[debug] [2017-09-28T20:14:49.009Z] CLI Version:   3.10.0
+[debug] [2017-09-28T20:14:49.009Z] Platform:      darwin
+[debug] [2017-09-28T20:14:49.009Z] Node Version:  v7.4.0
+[debug] [2017-09-28T20:14:49.009Z] Time:          Thu Sep 28 2017 22:14:49 GMT+0200 (CEST)
+[debug] [2017-09-28T20:14:49.009Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2017-09-28T20:14:49.021Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2017-09-28T20:14:49.022Z] > authorizing via signed-in user
+[debug] [2017-09-28T20:14:49.023Z] > refreshing access token with scopes: ["email","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","openid"]
+[debug] [2017-09-28T20:14:49.023Z] >>> HTTP REQUEST POST https://www.googleapis.com/oauth2/v3/token { refresh_token: '1/Rq8tDs_rZz2Pj10BOGDZMdEhfrzR73dPW3XWEAwZ5BM',
+  client_id: '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com',
+  client_secret: 'j9iVZfS8kkCEFUPaAeJV0sAi',
+  grant_type: 'refresh_token',
+  scope: 'email https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/firebase openid' } 
+ Thu Sep 28 2017 22:14:49 GMT+0200 (CEST)
+[debug] [2017-09-28T20:14:49.263Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T20:14:49.265Z] >>> HTTP REQUEST GET https://admin.firebase.com/v1/projects/tilesmanager-70e8d  
+ Thu Sep 28 2017 22:14:49 GMT+0200 (CEST)
+[debug] [2017-09-28T20:14:50.077Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T20:14:50.078Z] >>> HTTP REQUEST GET https://admin.firebase.com/v1/database/tilesmanager-70e8d/tokens  
+ Thu Sep 28 2017 22:14:50 GMT+0200 (CEST)
+[debug] [2017-09-28T20:14:51.400Z] <<< HTTP RESPONSE 200
+[info] 
+[info] === Serving from '/Users/stoyan/projects/elm-tile-manager'...
+[info] 
+[info] i  functions: Preparing to emulate HTTPS functions. Support for other event types coming soon.
+[debug] [2017-09-28T20:14:51.760Z] >>> HTTP REQUEST GET https://appengine.googleapis.com/v1/apps/tilesmanager-70e8d  
+ Thu Sep 28 2017 22:14:51 GMT+0200 (CEST)
+[debug] [2017-09-28T20:14:51.760Z] >>> HTTP REQUEST GET https://apikeys.googleapis.com/v1/projects/tilesmanager-70e8d/apiKeys  
+ Thu Sep 28 2017 22:14:51 GMT+0200 (CEST)
+[debug] [2017-09-28T20:14:52.862Z] <<< HTTP RESPONSE 200
+[debug] [2017-09-28T20:14:52.864Z] <<< HTTP RESPONSE 200
+[info] ✔  functions: api: http://localhost:5000/tilesmanager-70e8d/us-central1/api
