@@ -55,16 +55,6 @@ routeParse =
         ]
 
 
-targetDesktop : number
-targetDesktop =
-    1
-
-
-targetMobile : number
-targetMobile =
-    2
-
-
 
 -- MODEL
 
@@ -332,7 +322,7 @@ view model =
                             , listTiles model.tiles
                             ]
                         , div [ class "col-md-4" ]
-                            [ h2 [] [ text "URLs" ]
+                            [ h2 [] [ text "Pages" ]
                             , listGroups model.groups
                             ]
                         ]
@@ -374,18 +364,12 @@ view model =
                                     (\c ->
                                         case Dict.get c.nav_group_id groupsDict of
                                             Just d ->
-                                                li []
-                                                    [ text
-                                                        ("Target: "
-                                                            ++ (toString c.target)
-                                                            ++ " Sort order:"
-                                                            ++ (toString c.sort_order)
-                                                            ++ " Position:"
-                                                            ++ (toString d.position)
-                                                            ++ " Name:"
-                                                            ++ (toString d.name)
-                                                        )
-                                                    , linkRemove <| "#delete/connections/" ++ c.id
+                                                tr []
+                                                    [ td [] [ text <| showTarget c.target ]
+                                                    , td [] [ text <| toString c.sort_order ]
+                                                    , td [] [ text <| toString d.position ]
+                                                    , td [] [ text <| toString d.name ]
+                                                    , td [] [ linkRemove <| "#delete/connections/" ++ c.id ]
                                                     ]
 
                                             _ ->
@@ -399,16 +383,12 @@ view model =
                                     (\c ->
                                         case Dict.get c.nav_tile_id tilesDict of
                                             Just d ->
-                                                li []
-                                                    [ text
-                                                        ("Target: "
-                                                            ++ (toString c.target)
-                                                            ++ " Sort order:"
-                                                            ++ (toString c.sort_order)
-                                                            ++ " Name:"
-                                                            ++ (toString d.name)
-                                                        )
-                                                    , linkRemove <| "#delete/connections/" ++ c.id
+                                                tr []
+                                                    [ td [] [ text <| showTarget c.target ]
+                                                    , td [] [ text <| toString c.sort_order ]
+                                                      --, td [] [ text <| toString d.position ]
+                                                    , td [] [ text <| toString d.name ]
+                                                    , td [] [ linkRemove <| "#delete/connections/" ++ c.id ]
                                                     ]
 
                                             _ ->
@@ -417,11 +397,33 @@ view model =
                     in
                         div [ class "row" ]
                             [ div [ class "col-md-8" ]
-                                [ ul []
+                                [ h2 [] [ text "Connections" ]
+                                , table [ class "table table-striped table-bordered table-hover" ]
                                     (if group_id == "-" then
-                                        tilesList
+                                        [ thead []
+                                            [ tr []
+                                                [ th [] [ text "Target" ]
+                                                , th [] [ text "Sort" ]
+                                                , th [] [ text "Position" ]
+                                                , th [] [ text "Name" ]
+                                                , th [ style [ ( "width", "100px" ) ] ] [ text "Action" ]
+                                                ]
+                                            ]
+                                        , tbody []
+                                            tilesList
+                                        ]
                                      else
-                                        grpupList
+                                        [ thead []
+                                            [ tr []
+                                                [ th [] [ text "Target" ]
+                                                , th [] [ text "Sort" ]
+                                                , th [] [ text "Name" ]
+                                                , th [ style [ ( "width", "100px" ) ] ] [ text "Action" ]
+                                                ]
+                                            ]
+                                        , tbody []
+                                            grpupList
+                                        ]
                                     )
                                 ]
                             , div
@@ -514,10 +516,12 @@ header =
 
 deleteModal : String -> String -> Html Msg
 deleteModal itemType id =
-    div []
+    div [ class "remove-dialog" ]
         [ h1 [] [ text "Are you sure?" ]
-        , linkCancelRemove "#"
-        , btnConfirmRemove (DeleteItem itemType id)
+        , div [ class "btn-group" ]
+            [ linkCancelRemove "#"
+            , btnConfirmRemove (DeleteItem itemType id)
+            ]
         ]
 
 
@@ -606,42 +610,45 @@ connectionForm tiles groups conn =
             else
                 groupTuple
     in
-        Html.form [ onSubmit (SaveConnection conn) ]
-            [ div [ class "form-group" ]
-                [ label [] [ text "Tiles" ]
-                , select
-                    [ onInput (\val -> UpdateConnectionField (TextInput "nav_tile_id" val))
-                    , required True
+        div []
+            [ h2 [] [ text "Add connection" ]
+            , Html.form [ onSubmit (SaveConnection conn), class "br" ]
+                [ div [ class "form-group" ]
+                    [ label [] [ text "Tiles" ]
+                    , select
+                        [ onInput (\val -> UpdateConnectionField (TextInput "nav_tile_id" val))
+                        , required True
+                        ]
+                        (tupleToSelectOptions tileValues conn.nav_tile_id)
                     ]
-                    (tupleToSelectOptions tileValues conn.nav_tile_id)
-                ]
-            , div [ class "form-group" ]
-                [ label [] [ text "Groups" ]
-                , select
-                    [ onInput (\val -> UpdateConnectionField (TextInput "nav_group_id" val))
-                    , required True
+                , div [ class "form-group" ]
+                    [ label [] [ text "Groups" ]
+                    , select
+                        [ onInput (\val -> UpdateConnectionField (TextInput "nav_group_id" val))
+                        , required True
+                        ]
+                        (tupleToSelectOptions groupValues conn.nav_group_id)
                     ]
-                    (tupleToSelectOptions groupValues conn.nav_group_id)
-                ]
-            , div [ class "form-group" ]
-                [ label [] [ text "Sort order" ]
-                , input
-                    [ class "form-control"
-                    , type_ "number"
-                    , value <| toString conn.sort_order
-                    , onInput (\val -> UpdateConnectionField (TextInput "sort_order" val))
+                , div [ class "form-group" ]
+                    [ label [] [ text "Sort order" ]
+                    , input
+                        [ class "form-control"
+                        , type_ "number"
+                        , value <| toString conn.sort_order
+                        , onInput (\val -> UpdateConnectionField (TextInput "sort_order" val))
+                        ]
+                        []
                     ]
-                    []
-                ]
-            , div [ class "form-group" ]
-                [ label [] [ text "Target" ]
-                , select
-                    [ onInput (\val -> UpdateConnectionField (TextInput "target" val))
+                , div [ class "form-group" ]
+                    [ label [] [ text "Target" ]
+                    , select
+                        [ onInput (\val -> UpdateConnectionField (TextInput "target" val))
+                        ]
+                        (tupleToSelectOptions targets (toString conn.target))
                     ]
-                    (tupleToSelectOptions targets (toString conn.target))
-                ]
-            , div []
-                [ button [ class "btn btn-primary" ] [ text "Save" ]
+                , div []
+                    [ button [ class "btn btn-primary" ] [ text "Save" ]
+                    ]
                 ]
             ]
 

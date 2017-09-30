@@ -4,6 +4,16 @@ import Http
 import Navigation
 
 
+targetDesktop : number
+targetDesktop =
+    1
+
+
+targetMobile : number
+targetMobile =
+    2
+
+
 type Msg
     = NoOp
     | UrlChange Navigation.Location
@@ -79,3 +89,13 @@ type FormMessage
     | Checkbox String Bool
     | SelectPosition TileGroupsPosition
     | SelectTileType TileType
+
+
+showTarget : Int -> String
+showTarget target =
+    if target == targetDesktop then
+        "Desktop"
+    else if target == targetMobile then
+        "Mobile"
+    else
+        "None"
