@@ -14,6 +14,29 @@ targetMobile =
     2
 
 
+type alias Model =
+    { page : Page
+    , tiles : List Tile
+    , currentTile : Maybe Tile
+    , groups : List TileGroup
+    , currentGroup : Maybe TileGroup
+    , connections : List TileConnection
+    , currentConnection : Maybe TileConnection
+    }
+
+
+type Page
+    = Login
+    | Home
+    | AddTile
+    | EditTile String
+    | ConnectTile String String
+    | AddGroup
+    | EditGroup String
+    | ConnectGroup String
+    | Delete String String
+
+
 type Msg
     = NoOp
     | UrlChange Navigation.Location
