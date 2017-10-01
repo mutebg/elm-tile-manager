@@ -9,6 +9,7 @@ import Types exposing (..)
 
 apiBase : String
 apiBase =
+    --"https://us-central1-tilesmanager-70e8d.cloudfunctions.net/api/"
     "http://localhost:5000/tilesmanager-70e8d/us-central1/api/"
 
 

@@ -4,23 +4,12 @@ const express = require("express");
 const cors = require("cors");
 const Multer = require("multer");
 const gcloud = require("google-cloud")({
-  projectId: "elm-receipts",
-  keyFilename: "firebase-key.json"
+  projectId: "elm-receipts"
+  //  keyFilename: "firebase-key.json"
 });
-const uuidv4 = require("uuid/v4");
-const fs = require("fs");
 const bodyParser = require("body-parser");
 
-const storage = gcloud.storage();
-const vision = gcloud.vision();
 const app = express();
-
-const CLOUD_BUCKET = "elm-receipts.appspot.com";
-
-const multer = Multer({
-  storage: Multer.MemoryStorage,
-  fileSize: 5 * 1024 * 1024
-});
 
 admin.initializeApp(functions.config().firebase);
 
@@ -124,11 +113,15 @@ app.post("/:type", (req, res) => {
       .ref(`/${type}/${id}`)
       .update(data)
       .then(() => {
-        admin.database().ref(`/${type}/${id}`).once("value").then(snapshot => {
-          return res
-            .status(200)
-            .json(Object.assign({}, { id: id }, snapshot.val()));
-        });
+        admin
+          .database()
+          .ref(`/${type}/${id}`)
+          .once("value")
+          .then(snapshot => {
+            return res
+              .status(200)
+              .json(Object.assign({}, { id: id }, snapshot.val()));
+          });
       })
       .catch(error => {
         console.log(
@@ -179,45 +172,6 @@ app.delete("/:type/:id", (req, res) => {
       console.log(`Error deleting ${type}`, id, error.message);
       res.sendStatus(500);
     });
-});
-
-// Upload receipt image
-app.post("/upload", multer.any(), (req, res) => {
-  const file = req.files[0];
-  const bucket = storage.bucket(CLOUD_BUCKET);
-  const gcsname = uuidv4();
-  const files = bucket.file(gcsname);
-
-  const stream = files.createWriteStream({
-    metadata: {
-      contentType: file.mimetype
-    }
-  });
-
-  stream.on("error", err => {
-    console.log(err);
-  });
-
-  stream.on("finish", () => {
-    files.makePublic().then(() => {
-      const fileUrl = `https://storage.googleapis.com/${CLOUD_BUCKET}/${gcsname}`;
-
-      vision.readDocument(fileUrl, (err, text, apiResponse) => {
-        if (err) {
-          console.log("err", err);
-        }
-        console.log("done");
-        // text = 'This paragraph was extracted from image.jpg';
-        res.json({
-          //text: text,
-          amount: 4.15,
-          fileUrl: fileUrl
-        });
-      });
-    });
-  });
-
-  stream.end(file.buffer);
 });
 
 // Expose the API as a function
