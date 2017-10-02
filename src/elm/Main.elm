@@ -311,7 +311,7 @@ view model =
                     deleteModal itemType id
 
                 _ ->
-                    text "No selected page"
+                    h1 [] [ text "404" ]
             ]
         ]
 

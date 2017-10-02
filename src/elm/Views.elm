@@ -23,23 +23,21 @@ homePage model =
         ]
 
 
+extractIf : Maybe a -> (a -> Html msg) -> Html msg
+extractIf data fn =
+    data
+        |> Maybe.map fn
+        |> Maybe.withDefault (text "")
+
+
 addTilePage : Model -> Html Msg
 addTilePage { currentTile } =
-    currentTile
-        |> Maybe.map (\g -> tileForm g)
-        |> extractOrError
+    extractIf currentTile (\g -> tileForm g)
 
 
 addGroupPage : Model -> Html Msg
 addGroupPage { currentGroup } =
-    currentGroup
-        |> Maybe.map (\g -> groupForm g)
-        |> extractOrError
-
-
-extractOrError : Maybe (Html msg) -> Html msg
-extractOrError =
-    Maybe.withDefault (text "Wrong view")
+    extractIf currentGroup (\g -> groupForm g)
 
 
 connectTilePage : Model -> String -> String -> Html Msg
@@ -129,9 +127,8 @@ connectTilePage model tile_id group_id =
                 ]
             , div
                 [ class "col-md-4" ]
-                [ model.currentConnection
-                    |> Maybe.map (\conn -> connectionForm model.tiles model.groups conn)
-                    |> extractOrError
+                [ extractIf model.currentConnection
+                    (\conn -> connectionForm model.tiles model.groups conn)
                 ]
             ]
 
