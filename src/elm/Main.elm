@@ -7,6 +7,9 @@ import UrlParser as Url exposing ((</>), (<?>), s, int, stringParam, top)
 import Types exposing (..)
 import Data exposing (..)
 import Views exposing (..)
+import Task
+import Process
+import Time
 
 
 main : Program Never Model Msg
@@ -53,6 +56,7 @@ model =
     , currentGroup = Nothing
     , connections = []
     , currentConnection = Nothing
+    , error = Nothing
     }
 
 
@@ -190,10 +194,13 @@ update msg model =
             ( model, Navigation.newUrl "#" )
 
         ReqSaveTile (Err error) ->
-            ( model, Debug.log (toString error) Cmd.none )
+            ( { model | error = Just "Error. Can not save the tile" }, delay 10000 HideError )
 
         ReqSaveGroup (Ok group) ->
             ( model, Navigation.newUrl "#" )
+
+        ReqSaveGroup (Err error) ->
+            ( { model | error = Just "Error. Can not save the group" }, delay 10000 HideError )
 
         ReqSaveConnection (Ok conn) ->
             let
@@ -208,13 +215,16 @@ update msg model =
                 ( { model | currentConnection = Just newConn, connections = conn :: model.connections }, Cmd.none )
 
         ReqSaveConnection (Err error) ->
-            ( model, Debug.log (toString error) Cmd.none )
+            ( { model | error = Just "Error. Can not save the connection" }, delay 10000 HideError )
 
         ReqDelete itemType (Ok msg) ->
             ( model, Navigation.newUrl "#" )
 
         ReqDelete itemType (Err error) ->
-            ( model, Cmd.none )
+            ( { model | error = Just "Error. can not delete the item" }, delay 10000 HideError )
+
+        HideError ->
+            ( { model | error = Nothing }, Cmd.none )
 
         _ ->
             ( model
@@ -288,7 +298,8 @@ view model =
     div []
         [ Views.header
         , div [ class "container" ]
-            [ case model.page of
+            [ errorAlert model.error
+            , case model.page of
                 Home ->
                     homePage model
 
@@ -351,3 +362,10 @@ emptyConnection =
     , nav_tile_id = ""
     , store_id = 0
     }
+
+
+delay : Time.Time -> msg -> Cmd msg
+delay time msg =
+    Process.sleep time
+        |> Task.andThen (always <| Task.succeed msg)
+        |> Task.perform identity

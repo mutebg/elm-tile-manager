@@ -22,6 +22,7 @@ type alias Model =
     , currentGroup : Maybe TileGroup
     , connections : List TileConnection
     , currentConnection : Maybe TileConnection
+    , error : Maybe String
     }
 
 
@@ -55,6 +56,7 @@ type Msg
     | ReqSaveGroup (Result Http.Error TileGroup)
     | ReqSaveConnection (Result Http.Error TileConnection)
     | ReqDelete String (Result Http.Error MessageResponse)
+    | HideError
 
 
 type alias MessageResponse =

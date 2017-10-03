@@ -363,3 +363,16 @@ tilesToDict tiles =
     tiles
         |> List.map (\k -> ( k.id, k ))
         |> Dict.fromList
+
+
+errorAlert : Maybe String -> Html Msg
+errorAlert err =
+    case err of
+        Just msg ->
+            div [ class "alert alert-danger" ]
+                [ button [ onClick HideError, class "close" ] [ text "&times;" ]
+                , text msg
+                ]
+
+        _ ->
+            text ""
