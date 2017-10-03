@@ -22,6 +22,7 @@ type alias Model =
     , currentGroup : Maybe TileGroup
     , connections : List TileConnection
     , currentConnection : Maybe TileConnection
+    , user : User
     }
 
 
@@ -37,6 +38,14 @@ type Page
     | Delete String String
 
 
+type alias User =
+    { name : String
+    , pass : String
+    , token : Maybe String
+    , error : Maybe String
+    }
+
+
 type Msg
     = NoOp
     | UrlChange Navigation.Location
@@ -48,6 +57,7 @@ type Msg
     | UpdateTileField FormMessage
     | UpdateGroupField FormMessage
     | UpdateConnectionField FormMessage
+    | UpdateLoginField FormMessage
     | LoadTiles (Result Http.Error (List Tile))
     | LoadGroups (Result Http.Error (List TileGroup))
     | LoadConnections (Result Http.Error (List TileConnection))
@@ -55,6 +65,8 @@ type Msg
     | ReqSaveGroup (Result Http.Error TileGroup)
     | ReqSaveConnection (Result Http.Error TileConnection)
     | ReqDelete String (Result Http.Error MessageResponse)
+    | LoginAction
+    | LoginResponse (Result Http.Error String)
 
 
 type alias MessageResponse =

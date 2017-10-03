@@ -30,6 +30,7 @@ routeParse : Url.Parser (Page -> a) a
 routeParse =
     Url.oneOf
         [ Url.map Home top
+        , Url.map Login (Url.s "login")
         , Url.map AddTile (Url.s "tile-add")
         , Url.map EditTile (Url.s "tile-edit" </> Url.string)
         , Url.map ConnectTile (Url.s "connect" </> Url.string </> Url.string)
@@ -53,6 +54,12 @@ model =
     , currentGroup = Nothing
     , connections = []
     , currentConnection = Nothing
+    , user =
+        { name = ""
+        , pass = ""
+        , token = Nothing
+        , error = Nothing
+        }
     }
 
 
@@ -66,12 +73,17 @@ update msg model =
         UrlChange location ->
             let
                 newPage =
-                    case Url.parseHash routeParse location of
-                        Just page ->
-                            page
+                    case model.user.token of
+                        Just token ->
+                            case Url.parseHash routeParse location of
+                                Just page ->
+                                    page
 
-                        _ ->
-                            Home
+                                _ ->
+                                    Home
+
+                        Nothing ->
+                            Login
 
                 newModel =
                     case newPage of
@@ -130,6 +142,13 @@ update msg model =
                             model.currentTile
             in
                 ( { model | currentTile = newTile }, Cmd.none )
+
+        UpdateLoginField message ->
+            let
+                newUser =
+                    updateUser model.user message
+            in
+                ( { model | user = newUser }, Cmd.none )
 
         UpdateGroupField message ->
             let
@@ -216,6 +235,29 @@ update msg model =
         ReqDelete itemType (Err error) ->
             ( model, Cmd.none )
 
+        LoginAction ->
+            ( model, loginReq model.user.name model.user.pass )
+
+        LoginResponse (Ok token) ->
+            let
+                user =
+                    model.user
+
+                newUser =
+                    { user | token = Just token, error = Nothing }
+            in
+                ( { model | user = newUser }, Navigation.newUrl "#" )
+
+        LoginResponse (Err error) ->
+            let
+                user =
+                    model.user
+
+                newUser =
+                    { user | token = Nothing, error = Just "error" }
+            in
+                ( { model | user = newUser }, Cmd.none )
+
         _ ->
             ( model
             , Cmd.none
@@ -242,6 +284,22 @@ updateTile tile message =
 
         _ ->
             tile
+
+
+updateUser : User -> FormMessage -> User
+updateUser user message =
+    case message of
+        TextInput "name" inputValue ->
+            { user | name = inputValue }
+
+        TextInput "pass" inputValue ->
+            { user | pass = inputValue }
+
+        TextInput "token" inputValue ->
+            { user | token = Just inputValue }
+
+        _ ->
+            user
 
 
 updateGroup : TileGroup -> FormMessage -> TileGroup
@@ -285,35 +343,38 @@ updateConnection g message =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ Views.header
-        , div [ class "container" ]
-            [ case model.page of
-                Home ->
-                    homePage model
+    if model.page == Login then
+        loginPage model
+    else
+        div []
+            [ Views.header
+            , div [ class "container" ]
+                [ case model.page of
+                    Home ->
+                        homePage model
 
-                AddTile ->
-                    addTilePage model
+                    AddTile ->
+                        addTilePage model
 
-                EditTile id ->
-                    addTilePage model
+                    EditTile id ->
+                        addTilePage model
 
-                ConnectTile tile_id group_id ->
-                    connectTilePage model tile_id group_id
+                    ConnectTile tile_id group_id ->
+                        connectTilePage model tile_id group_id
 
-                AddGroup ->
-                    addGroupPage model
+                    AddGroup ->
+                        addGroupPage model
 
-                EditGroup id ->
-                    addGroupPage model
+                    EditGroup id ->
+                        addGroupPage model
 
-                Delete itemType id ->
-                    deleteModal itemType id
+                    Delete itemType id ->
+                        deleteModal itemType id
 
-                _ ->
-                    h1 [] [ text "404" ]
+                    _ ->
+                        h1 [] [ text "404" ]
+                ]
             ]
-        ]
 
 
 emptyTile : Tile

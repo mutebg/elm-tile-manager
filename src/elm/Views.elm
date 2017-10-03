@@ -9,6 +9,13 @@ import Types exposing (..)
 import Button exposing (..)
 
 
+extractIf : Maybe a -> (a -> Html msg) -> Html msg
+extractIf data fn =
+    data
+        |> Maybe.map fn
+        |> Maybe.withDefault (text "")
+
+
 homePage : Model -> Html Msg
 homePage model =
     div [ class "row" ]
@@ -23,11 +30,23 @@ homePage model =
         ]
 
 
-extractIf : Maybe a -> (a -> Html msg) -> Html msg
-extractIf data fn =
-    data
-        |> Maybe.map fn
-        |> Maybe.withDefault (text "")
+loginPage : Model -> Html Msg
+loginPage { user } =
+    Html.form [ onSubmit (LoginAction), class "br" ]
+        [ extractIf user.error (\g -> div [ class "alert alert-danger" ] [ text g ])
+        , div
+            [ class "form-group" ]
+            [ label [] [ text "Username" ]
+            , input [ class "form-control", type_ "text", value user.name, onInput (\val -> UpdateLoginField (TextInput "name" val)) ] []
+            ]
+        , div [ class "form-group" ]
+            [ label [] [ text "Password" ]
+            , input [ class "form-control", type_ "text", value user.pass, onInput (\val -> UpdateLoginField (TextInput "pass" val)) ] []
+            ]
+        , div []
+            [ button [ class "btn btn-primary" ] [ text "Login" ]
+            ]
+        ]
 
 
 addTilePage : Model -> Html Msg

@@ -248,3 +248,37 @@ deleteItem itemType id =
                 }
     in
         Http.send (\res -> ReqDelete itemType res) req
+
+
+loginReq : String -> String -> Cmd Msg
+loginReq user password =
+    let
+        req =
+            Http.request
+                { method = "POST"
+                , body = loginEncoder user password |> Http.jsonBody
+                , url = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyAcFNMw-GikdJ019_Uvg8gVGcoR1TRVJfY"
+                , expect = Http.expectJson loginDecoder
+                , headers = []
+                , timeout = Nothing
+                , withCredentials = False
+                }
+    in
+        Http.send LoginResponse req
+
+
+loginDecoder : Decode.Decoder String
+loginDecoder =
+    Decode.at [ "idToken" ] Decode.string
+
+
+loginEncoder : String -> String -> Encode.Value
+loginEncoder username password =
+    let
+        params =
+            [ ( "email", Encode.string username )
+            , ( "password", Encode.string password )
+            , ( "returnSecureToken", Encode.bool True )
+            ]
+    in
+        Encode.object params
